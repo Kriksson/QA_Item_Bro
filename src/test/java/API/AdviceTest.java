@@ -458,4 +458,37 @@ public class AdviceTest extends TestBaseAPI{
             Assert.assertEquals(Long.valueOf(1), advices.getFirst().price());
         });
     }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Отсутствующая, несуществующая категория отклоняются")
+    public void unsuccessfulCreateAdviceWithNonExistCategoryTest() {
+        String name =  ApiUtility.genNick();
+        String password =  ApiUtility.genPass();
+        UtilityRegister util = ApiUtility.registerAndReturnData(URL, name, password);
+
+        Allure.step("Авторизуемся под созданным аккаунтом", () -> {
+            given()
+                    .filter(util.sessionFilter())
+                    .auth().preemptive().basic(name, password)
+                    .when()
+                    .get(URL+"/api/user/me")
+                    .then()
+                    .log().all()
+                    .statusCode(200);
+        });
+        CreateAdviceBody body = new CreateAdviceBody("Test", 100000L, 1L);
+        Allure.step("Создаём объявление в несуществующей категории", () -> {
+            given()
+                    .filter(util.sessionFilter())
+                    .header(util.csrf().headerName(), util.csrf().token())
+                    .contentType(ContentType.JSON)
+                    .body(body)
+                    .when()
+                    .post(URL+"/api/advices")
+                    .then()
+                    .log().all()
+                    .statusCode(404);
+        });
+    }
 }
