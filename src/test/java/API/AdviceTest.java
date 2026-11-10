@@ -491,4 +491,62 @@ public class AdviceTest extends TestBaseAPI{
                     .statusCode(404);
         });
     }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Шестое активное объявление отклоняется")
+    public void rateAdvicesTest() {
+        String nick = ApiUtility.genNick();
+        String password = ApiUtility.genPass();
+        UtilityRegister util = ApiUtility.registerAndReturnData(URL, nick, password);
+
+        Allure.step("Авторизуемся в аккаунт", () -> {
+            given()
+                    .filter(util.sessionFilter())
+                    .auth().preemptive().basic(nick, password)
+                    .when()
+                    .get(URL+"/api/user/me")
+                    .then()
+                    .log().all()
+                    .statusCode(200);
+        });
+
+        CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
+
+        for (int i = 0; i < 5; i++) {
+            CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 1L);
+            Allure.step("Создаём объявление №"+(i+1), () -> {
+                given()
+                        .filter(util.sessionFilter())
+                        .header(util.csrf().headerName(), util.csrf().token())
+                        .contentType(ContentType.JSON)
+                        .body(body)
+                        .when()
+                        .post(URL+"/api/advices")
+                        .then()
+                        .log().all()
+                        .statusCode(201)
+                        .body("name", equalTo(body.name()));
+            });
+        }
+
+        Allure.step("Пытаемся создать 6 объявление", () -> {
+            CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 1L);
+            given()
+                    .filter(util.sessionFilter())
+                    .header(util.csrf().headerName(), util.csrf().token())
+                    .contentType(ContentType.JSON)
+                    .body(body)
+                    .when()
+                    .post(URL+"/api/advices")
+                    .then()
+                    .log().all()
+                    .statusCode(409)
+                    .body("message", equalTo("Limit advice"));
+        });
+    }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Публичный список содержит только активные объявления выбранной категории")
 }
