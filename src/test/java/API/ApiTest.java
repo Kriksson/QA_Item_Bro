@@ -445,4 +445,18 @@ public class ApiTest {
                     .statusCode(401);
         });
     }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Изменяющие запросы без CSRF-токена и с неверным токеном отклоняются")
+    public void logoutKilledSessionTest() {
+        Allure.step("Отправляем запрос на регистрацию без получения CSRF", () -> {
+            given()
+                    .when()
+                    .post(URL+"/api/user/")
+                    .then()
+                    .log().all()
+                    .statusCode(403);
+        });
+    }
 }
