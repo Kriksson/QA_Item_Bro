@@ -9,13 +9,9 @@ import org.junit.Assert;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.NullAndEmptySource;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.*;
 
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -174,18 +170,15 @@ public class ApiTest {
                     .statusCode(400)
                     .extract().body().as(ApiError.class);
         });
-        Allure.step("Проверяем ошибку регистрации", () -> Assert.assertEquals("size must be between 0 and 20", response.message()));
+        Allure.step("Проверяем ошибку регистрации", () -> Assert.assertEquals("size must be between 5 and 20", response.message()));
     }
 
     static Stream<String> validNames() {
-        List<String> values = new ArrayList<>();
         String uuid = UUID.randomUUID().toString().replace("-", "");
-
-        for (int i = 1; i <= 20; i++) {
-            values.add(uuid.substring(0, i));
-        }
-
-        return values.stream();
+        return Stream.of(
+                uuid.substring(0, 5),
+                uuid.substring(0, 20)
+        );
     }
 
     @ParameterizedTest
@@ -195,6 +188,147 @@ public class ApiTest {
     public void successfulRegisterWithValidNickname(String name) {
         String password =  UUID.randomUUID().toString().replace("-","").substring(0, 19);
         RegisterAccountResponse response = Allure.step("Пробуем создать ник с валидной границей аргументом", () -> {
+            SessionFilter filter = new SessionFilter();
+            CsrfResponse csrf = given()
+                    .filter(filter)
+                    .when()
+                    .get(URL+"/csrf")
+                    .then()
+                    .log().all()
+                    .statusCode(200)
+                    .extract().body().as(CsrfResponse.class);
+            return given()
+                    .filter(filter)
+                    .body(new RegisterAccountBody(name, password))
+                    .contentType(ContentType.JSON)
+                    .header(csrf.headerName(), csrf.token())
+                    .when()
+                    .post(URL+"/api/user")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(RegisterAccountResponse.class);
+        });
+        Allure.step("Проверяем успех регистрации", () -> {
+            Assert.assertEquals(name, response.name());
+        });
+    }
+
+    @ParameterizedTest
+    @Owner("kriksson")
+    @MethodSource("invalidPasswords")
+    @DisplayName("Попытка зарегистрировать аккаунт с слишком длинным и коротким паролем")
+    public void unSuccessfulRegisterAccountWithInvalidPassword(String password) {
+        String name =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
+        ApiError response = Allure.step("Пробуем создать аккаунт с невалидным паролем", () -> {
+            SessionFilter filter = new SessionFilter();
+            CsrfResponse csrf = given()
+                    .filter(filter)
+                    .when()
+                    .get(URL+"/csrf")
+                    .then()
+                    .log().all()
+                    .statusCode(200)
+                    .extract().body().as(CsrfResponse.class);
+            return given()
+                    .filter(filter)
+                    .body(new RegisterAccountBody(name, password))
+                    .contentType(ContentType.JSON)
+                    .header(csrf.headerName(), csrf.token())
+                    .when()
+                    .post(URL+"/api/user")
+                    .then()
+                    .log().all()
+                    .statusCode(400)
+                    .extract().body().as(ApiError.class);
+        });
+        Allure.step("Проверяем ошибку регистрации", () -> Assert.assertEquals("size must be between 8 and 64", response.message()));
+    }
+
+    @ParameterizedTest
+    @Owner("kriksson")
+    @NullSource
+    @DisplayName("Попытка зарегистрировать аккаунт с null паролем")
+    public void unSuccessfulRegisterAccountWithInvalidSizePassword(String password) {
+        String name =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
+        ApiError response = Allure.step("Пробуем создать аккаунт с пустым паролем", () -> {
+            SessionFilter filter = new SessionFilter();
+            CsrfResponse csrf = given()
+                    .filter(filter)
+                    .when()
+                    .get(URL+"/csrf")
+                    .then()
+                    .log().all()
+                    .statusCode(200)
+                    .extract().body().as(CsrfResponse.class);
+            return given()
+                    .filter(filter)
+                    .body(new RegisterAccountBody(name, password))
+                    .contentType(ContentType.JSON)
+                    .header(csrf.headerName(), csrf.token())
+                    .when()
+                    .post(URL+"/api/user")
+                    .then()
+                    .log().all()
+                    .statusCode(400)
+                    .extract().body().as(ApiError.class);
+        });
+        Allure.step("Проверяем ошибку регистрации", () -> Assert.assertEquals("must not be blank", response.message()));
+    }
+
+    @ParameterizedTest
+    @Owner("kriksson")
+    @EmptySource
+    @DisplayName("Попытка зарегистрировать аккаунт с пустым паролем")
+    public void unSuccessfulRegisterAccountWithEmptyPassword(String password) {
+        String name =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
+        ApiError response = Allure.step("Пробуем создать аккаунт с пустым паролем", () -> {
+            SessionFilter filter = new SessionFilter();
+            CsrfResponse csrf = given()
+                    .filter(filter)
+                    .when()
+                    .get(URL+"/csrf")
+                    .then()
+                    .log().all()
+                    .statusCode(200)
+                    .extract().body().as(CsrfResponse.class);
+            return given()
+                    .filter(filter)
+                    .body(new RegisterAccountBody(name, password))
+                    .contentType(ContentType.JSON)
+                    .header(csrf.headerName(), csrf.token())
+                    .when()
+                    .post(URL+"/api/user")
+                    .then()
+                    .log().all()
+                    .statusCode(400)
+                    .extract().body().as(ApiError.class);
+        });
+        Allure.step("Проверяем ошибку регистрации", () -> Assert.assertEquals("must match \"^[A-Za-z0-9!@#$%^&*()_+\\-=]+$\"", response.message()));
+    }
+
+    static Stream<String> validPasswords() {
+        return Stream.of(
+                "a".repeat(8),
+                "a".repeat(20),
+                "a".repeat(64)
+        );
+    }
+
+    static Stream<String> invalidPasswords() {
+        return Stream.of(
+                "a".repeat(7),
+                "a".repeat(65)
+        );
+    }
+
+    @ParameterizedTest
+    @Owner("kriksson")
+    @MethodSource("validPasswords")
+    @DisplayName("Регистрация аккаунтов с паролем в рамках границы")
+    public void successfulRegisterWithValidPassword(String password) {
+        String name =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
+        RegisterAccountResponse response = Allure.step("Пробуем создать аккаунт с валидной границей паролей", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
                     .filter(filter)
