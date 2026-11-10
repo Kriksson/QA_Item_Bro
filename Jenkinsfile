@@ -41,7 +41,7 @@ pipeline {
             junit 'target/surefire-reports/TEST-*.xml'
 
             archiveArtifacts(
-                    arifacts: 'allure-results/**'
+                    artifacts: 'allure-results/**'
             )
 
             allure(
