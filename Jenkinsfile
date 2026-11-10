@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage("Получить исходники") {
             steps {
-                git branch: 'master'
+                git branch: 'master',
                 url: 'https://github.com/Kriksson/QA_Item_Bro'
             }
         }
