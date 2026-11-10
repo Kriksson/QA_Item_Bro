@@ -1,10 +1,6 @@
 package API;
 
-import API.Records.CsrfResponse;
-import API.Records.AuthorizedSession;
-import API.Records.RegisterAccountBody;
-import API.Records.RegisterAccountResponse;
-import API.Records.UtilityRegister;
+import API.Records.*;
 import io.qameta.allure.Allure;
 import io.restassured.filter.session.SessionFilter;
 import io.restassured.http.ContentType;
@@ -40,6 +36,24 @@ public class ApiUtility {
                 .extract().body().as(RegisterAccountResponse.class));
 
         return new UtilityRegister(csrf, filter,response, new RegisterAccountBody(name, password));
+    }
+
+    public static CategoryDTO createTestCategory(String URL, String categoryName) {
+        AuthorizedSession session = authAdmin(URL);
+        CsrfResponse csrf = session.csrf();
+        SessionFilter filter = session.sessionFilter();
+
+        return Allure.step("Создание тестовой категории", () -> given()
+                .filter(filter)
+                .header(csrf.headerName(), csrf.token())
+                .contentType(ContentType.JSON)
+                .body(new CategoryBody(categoryName))
+                .when()
+                .post(URL+"/api/games")
+                .then()
+                .log().all()
+                .statusCode(201)
+                .extract().body().as(CategoryDTO.class));
     }
 
     public static AuthorizedSession authAdmin(String URL) {

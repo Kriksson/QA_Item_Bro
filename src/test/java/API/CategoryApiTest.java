@@ -162,18 +162,10 @@ public class CategoryApiTest extends TestBaseAPI{
         SessionFilter filter = admin.sessionFilter();
         CsrfResponse csrf = admin.csrf();
 
-        Allure.step("Администратор создаёт категорию №1", () -> given()
-                .filter(filter)
-                .header(csrf.headerName(), csrf.token())
-                .contentType(ContentType.JSON)
-                .body(new CategoryBody("Warcraft"))
-                .when()
-                .post(URL+"/api/games")
-                .then()
-                .log().all()
-                .statusCode(201)
-                .body("name", equalTo("Warcraft"))
-        );
+        Allure.step("Администратор создаёт категорию №1", () -> {
+            CategoryDTO category = ApiUtility.createTestCategory(URL, "Warcraft");
+            Assert.assertEquals("Warcraft", category.name());
+        });
 
         ApiError api = Allure.step("Администратор создаёт категорию №2", () -> given()
                 .filter(filter)
@@ -200,18 +192,7 @@ public class CategoryApiTest extends TestBaseAPI{
         SessionFilter filter = admin.sessionFilter();
         CsrfResponse csrf = admin.csrf();
 
-        CategoryDTO createdCategory = Allure.step("Администратор создаёт категорию", () -> given()
-                .filter(filter)
-                .header(csrf.headerName(), csrf.token())
-                .contentType(ContentType.JSON)
-                .body(new CategoryBody("Grand Theft Auto VI"))
-                .when()
-                .post(URL+"/api/games")
-                .then()
-                .log().all()
-                .statusCode(201)
-                .extract().body().as(CategoryDTO.class)
-        );
+        CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, "Grand Theft Auto VI");
 
         Allure.step("Проверяем что категория появилась в списках", () -> {
             List<CategoryDTO> categories = given()
@@ -295,18 +276,7 @@ public class CategoryApiTest extends TestBaseAPI{
                     .statusCode(404);
         });
 
-        CategoryDTO createdCategory = Allure.step("Администратор создаёт категорию", () -> given()
-                .filter(filter)
-                .header(csrf.headerName(), csrf.token())
-                .contentType(ContentType.JSON)
-                .body(new CategoryBody("Minecraft"))
-                .when()
-                .post(URL+"/api/games")
-                .then()
-                .log().all()
-                .statusCode(201)
-                .extract().body().as(CategoryDTO.class)
-        );
+        CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, "Minecraft");
 
         Allure.step("Архивация созданного объявления", () -> {
             given()
