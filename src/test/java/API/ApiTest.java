@@ -16,6 +16,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.equalTo;
 
 public class ApiTest {
 
@@ -209,9 +210,7 @@ public class ApiTest {
                     .statusCode(201)
                     .extract().body().as(RegisterAccountResponse.class);
         });
-        Allure.step("Проверяем успех регистрации", () -> {
-            Assert.assertEquals(name, response.name());
-        });
+        Allure.step("Проверяем успех регистрации", () -> Assert.assertEquals(name, response.name()));
     }
 
     @ParameterizedTest
@@ -350,8 +349,48 @@ public class ApiTest {
                     .statusCode(201)
                     .extract().body().as(RegisterAccountResponse.class);
         });
-        Allure.step("Проверяем успех регистрации", () -> {
-            Assert.assertEquals(name, response.name());
+        Allure.step("Проверяем успех регистрации", () -> Assert.assertEquals(name, response.name()));
+    }
+
+    @Test
+    @Owner("Kriksson")
+    @DisplayName("Авторизованный пользователь не может зарегистрировать другого пользователя в текущей сессии")
+    public void unsuccessfulRegisterFromAuthorizedUser() {
+        String name =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
+        String newName =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
+        String password =  UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        UtilityRegister util = ApiUtility.registerAndReturnData(URL, name, password);
+
+        Allure.step("Авторизуемся под созданным аккаунтом", () -> {
+            given()
+                    .filter(util.sessionFilter())
+                    .auth().preemptive().basic(name, password)
+                    .when()
+                    .get(URL+"/api/user/me")
+                    .then()
+                    .statusCode(200)
+                    .body("name", equalTo(name));
         });
+
+        Allure.step("Проверяем что авторизация сохранилась в сессии", () -> {
+            given()
+                    .filter(util.sessionFilter())
+                    .when()
+                    .get(URL+"/api/user/me")
+                    .then()
+                    .statusCode(200)
+                    .body("name", equalTo(name));
+        });
+
+        Allure.step("Пробуем в той же сессии создать новый аккаунт", () -> given()
+                .filter(util.sessionFilter())
+                .body(new RegisterAccountBody(newName, password))
+                .header(util.csrf().headerName(), util.csrf().token())
+                .contentType(ContentType.JSON)
+                .when()
+                .post(URL+"/api/user")
+                .then()
+                .log().all()
+                .statusCode(403));
     }
 }
