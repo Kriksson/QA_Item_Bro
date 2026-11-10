@@ -41,17 +41,9 @@ public class CategoryApiTest extends TestBaseAPI{
     @Owner("kriksson")
     @DisplayName("Администратор создаёт категорию")
     public void createCategoryTest() {
-        SessionFilter filter = new SessionFilter();
-        CsrfResponse csrf = given()
-                .filter(filter).when().get(URL+"/csrf").then().extract().body().as(CsrfResponse.class);
-        Allure.step("Администратор авторизуется", () -> given()
-                .auth().preemptive().basic("ADMIN", "Admin123!")
-                .filter(filter)
-                .get(URL+"/api/user/me")
-                .then()
-                .log().all())
-                .body("userRole", equalTo("ADMIN"))
-                .statusCode(200);
+        AuthorizedSession admin = ApiUtility.authAdmin(URL);
+        SessionFilter filter = admin.sessionFilter();
+        CsrfResponse csrf = admin.csrf();
 
         CategoryDTO category = Allure.step("Администратор создаёт категорию", () -> given()
                 .filter(filter)
@@ -121,17 +113,9 @@ public class CategoryApiTest extends TestBaseAPI{
     })
     @DisplayName("Пустое название, пробелы, null или слишком длинное название при создании категории")
     public void unsuccessfulCreateCategoryWithNullNameTest(String name) {
-        SessionFilter filter = new SessionFilter();
-        CsrfResponse csrf = given()
-                .filter(filter).when().get(URL+"/csrf").then().extract().body().as(CsrfResponse.class);
-        Allure.step("Администратор авторизуется", () -> given()
-                        .auth().preemptive().basic("ADMIN", "Admin123!")
-                        .filter(filter)
-                        .get(URL+"/api/user/me")
-                        .then()
-                        .log().all())
-                .body("userRole", equalTo("ADMIN"))
-                .statusCode(200);
+        AuthorizedSession admin = ApiUtility.authAdmin(URL);
+        SessionFilter filter = admin.sessionFilter();
+        CsrfResponse csrf = admin.csrf();
 
         Allure.step("Администратор не может создать категорию с пустым названием", () -> given()
                 .filter(filter)
@@ -153,17 +137,9 @@ public class CategoryApiTest extends TestBaseAPI{
     })
     @DisplayName("Названия длиной 1 и 50 символов принимаются")
     public void successfulCreateCategoryTest(String name) {
-        SessionFilter filter = new SessionFilter();
-        CsrfResponse csrf = given()
-                .filter(filter).when().get(URL+"/csrf").then().extract().body().as(CsrfResponse.class);
-        Allure.step("Администратор авторизуется", () -> given()
-                        .auth().preemptive().basic("ADMIN", "Admin123!")
-                        .filter(filter)
-                        .get(URL+"/api/user/me")
-                        .then()
-                        .log().all())
-                .body("userRole", equalTo("ADMIN"))
-                .statusCode(200);
+        AuthorizedSession admin = ApiUtility.authAdmin(URL);
+        SessionFilter filter = admin.sessionFilter();
+        CsrfResponse csrf = admin.csrf();
 
         Allure.step("Администратор создаёт категорию", () -> given()
                 .filter(filter)
@@ -182,36 +158,28 @@ public class CategoryApiTest extends TestBaseAPI{
     @Owner("kriksson")
     @DisplayName("Создание категории с занятым названием отклоняется")
     public void unsuccessfulCreateDuplicateCategoryTest() {
-        SessionFilter filter = new SessionFilter();
-        CsrfResponse csrf = given()
-                .filter(filter).when().get(URL+"/csrf").then().extract().body().as(CsrfResponse.class);
-        Allure.step("Администратор авторизуется", () -> given()
-                        .auth().preemptive().basic("ADMIN", "Admin123!")
-                        .filter(filter)
-                        .get(URL+"/api/user/me")
-                        .then()
-                        .log().all())
-                .body("userRole", equalTo("ADMIN"))
-                .statusCode(200);
+        AuthorizedSession admin = ApiUtility.authAdmin(URL);
+        SessionFilter filter = admin.sessionFilter();
+        CsrfResponse csrf = admin.csrf();
 
         Allure.step("Администратор создаёт категорию №1", () -> given()
                 .filter(filter)
                 .header(csrf.headerName(), csrf.token())
                 .contentType(ContentType.JSON)
-                .body(new CategoryBody("ChatGPT"))
+                .body(new CategoryBody("Warcraft"))
                 .when()
                 .post(URL+"/api/games")
                 .then()
                 .log().all()
                 .statusCode(201)
-                .body("name", equalTo("ChatGPT"))
+                .body("name", equalTo("Warcraft"))
         );
 
         ApiError api = Allure.step("Администратор создаёт категорию №2", () -> given()
                 .filter(filter)
                 .header(csrf.headerName(), csrf.token())
                 .contentType(ContentType.JSON)
-                .body(new CategoryBody("ChatGPT"))
+                .body(new CategoryBody("Warcraft"))
                 .when()
                 .post(URL+"/api/games")
                 .then()
@@ -228,17 +196,9 @@ public class CategoryApiTest extends TestBaseAPI{
     @Owner("kriksson")
     @DisplayName("Администратор архивирует категорию и она пропадает из общего списка")
     public void successfulDeleteCategoryTest() {
-        SessionFilter filter = new SessionFilter();
-        CsrfResponse csrf = given()
-                .filter(filter).when().get(URL+"/csrf").then().extract().body().as(CsrfResponse.class);
-        Allure.step("Администратор авторизуется", () -> given()
-                        .auth().preemptive().basic("ADMIN", "Admin123!")
-                        .filter(filter)
-                        .get(URL+"/api/user/me")
-                        .then()
-                        .log().all())
-                .body("userRole", equalTo("ADMIN"))
-                .statusCode(200);
+        AuthorizedSession admin = ApiUtility.authAdmin(URL);
+        SessionFilter filter = admin.sessionFilter();
+        CsrfResponse csrf = admin.csrf();
 
         CategoryDTO createdCategory = Allure.step("Администратор создаёт категорию", () -> given()
                 .filter(filter)
@@ -313,6 +273,61 @@ public class CategoryApiTest extends TestBaseAPI{
                     .then()
                     .log().all()
                     .statusCode(403);
+        });
+    }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Архивирование несуществующей или уже архивной категории возвращает соответствующую ошибку")
+    public void unsuccessfulDeleteCategoryWhichAlreadyDeletedTest() {
+        AuthorizedSession admin = ApiUtility.authAdmin(URL);
+        SessionFilter filter = admin.sessionFilter();
+        CsrfResponse csrf = admin.csrf();
+
+        Allure.step("Попытка архивировать несуществующую категорию", () -> {
+            given()
+                    .filter(filter)
+                    .header(csrf.headerName(), csrf.token())
+            .when()
+                    .patch(URL+"/api/games/999/delete")
+            .then()
+                    .log().all()
+                    .statusCode(404);
+        });
+
+        CategoryDTO createdCategory = Allure.step("Администратор создаёт категорию", () -> given()
+                .filter(filter)
+                .header(csrf.headerName(), csrf.token())
+                .contentType(ContentType.JSON)
+                .body(new CategoryBody("Minecraft"))
+                .when()
+                .post(URL+"/api/games")
+                .then()
+                .log().all()
+                .statusCode(201)
+                .extract().body().as(CategoryDTO.class)
+        );
+
+        Allure.step("Архивация созданного объявления", () -> {
+            given()
+                    .filter(filter)
+                    .header(csrf.headerName(), csrf.token())
+                    .when()
+                    .patch(URL+"/api/games/"+createdCategory.id()+"/delete")
+                    .then()
+                    .log().all()
+                    .statusCode(204);
+        });
+
+        Allure.step("Архивация уже архивированного объявления", () -> {
+            given()
+                    .filter(filter)
+                    .header(csrf.headerName(), csrf.token())
+                    .when()
+                    .patch(URL+"/api/games/"+createdCategory.id()+"/delete")
+                    .then()
+                    .log().all()
+                    .statusCode(409);
         });
     }
 }
