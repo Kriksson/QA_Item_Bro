@@ -549,4 +549,89 @@ public class AdviceTest extends TestBaseAPI{
     @Test
     @Owner("kriksson")
     @DisplayName("Публичный список содержит только активные объявления выбранной категории")
+    public void checkPublicListAdvicesTest() {
+        String nick = ApiUtility.genNick();
+        String password = ApiUtility.genPass();
+        UtilityRegister util = ApiUtility.registerAndReturnData(URL, nick, password);
+        CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
+
+        Allure.step("Авторизуемся в аккаунт", () -> {
+            given()
+                    .filter(util.sessionFilter())
+                    .auth().preemptive().basic(nick, password)
+                    .when()
+                    .get(URL+"/api/user/me")
+                    .then()
+                    .log().all()
+                    .statusCode(200);
+        });
+
+        Allure.step("Создаём первое объявление", () -> {
+            CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 1L);
+            given()
+                    .filter(util.sessionFilter())
+                    .header(util.csrf().headerName(),  util.csrf().token())
+                    .contentType(ContentType.JSON)
+                    .body(body)
+                    .when()
+                    .post(URL+"/api/advices")
+                    .then()
+                    .log().all()
+                    .statusCode(201);
+        });
+
+        AdviceDTO dAdvice = Allure.step("Создаём второе объявление", () -> {
+            CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 1L);
+            return given()
+                    .filter(util.sessionFilter())
+                    .header(util.csrf().headerName(),  util.csrf().token())
+                    .contentType(ContentType.JSON)
+                    .body(body)
+                    .when()
+                    .post(URL+"/api/advices")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(AdviceDTO.class);
+        });
+
+        List<AdviceDTO> adviceDTOList = Allure.step("Запрашиваем все объявления и проверяем что отслеживаемый среди них", () -> given()
+                .filter(util.sessionFilter())
+                .queryParam("gameId", createdCategory.id())
+                .when()
+                .get(URL+"/api/advices")
+                .then()
+                .log().all()
+                .statusCode(200)
+                .extract().jsonPath().getList("content", AdviceDTO.class));
+
+        Allure.step("Проверяем что в списке есть отслеживаемое объявление", () -> {
+            Assert.assertTrue(adviceDTOList.stream().anyMatch(x -> x.name().equals(dAdvice.name())));
+        });
+
+        Allure.step("Архивируем объявление", () -> {
+            given()
+                    .filter(util.sessionFilter())
+                    .header(util.csrf().headerName(),  util.csrf().token())
+                    .when()
+                    .delete(URL+"/api/advices/" + dAdvice.id())
+                    .then()
+                    .log().all()
+                    .statusCode(204);
+        });
+
+        List<AdviceDTO> newAdviceDTOList = Allure.step("Запрашиваем все объявления и проверяем что отслеживаемого нет среди них", () -> given()
+                .filter(util.sessionFilter())
+                .queryParam("gameId", createdCategory.id())
+                .when()
+                .get(URL+"/api/advices")
+                .then()
+                .log().all()
+                .statusCode(200)
+                .extract().jsonPath().getList("content", AdviceDTO.class));
+
+        Allure.step("Проверяем что отслеживаемое объявление пропала из списка", () -> {
+            Assert.assertFalse(newAdviceDTOList.stream().anyMatch(x -> x.name().equals(dAdvice.name())));
+        });
+    }
 }
