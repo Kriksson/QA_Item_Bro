@@ -26,8 +26,8 @@ public class SecurityApiTest extends TestBaseAPI {
     @Owner("Kriksson")
     @DisplayName("Успешная регистрация аккаунта")
     public void successfulRegisterTest() {
-        String name = "test_"+ UUID.randomUUID().toString().replace("-","").substring(0, 12);
-        String password = UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        String name = ApiUtility.genNick();
+        String password = ApiUtility.genPass();
         UtilityRegister utilityRegister = ApiUtility.registerAndReturnData(URL, name, password);
 
         Allure.step("Сравниваем значения с ожидаемыми", () -> {
@@ -45,8 +45,8 @@ public class SecurityApiTest extends TestBaseAPI {
     @Owner("kriksson")
     @DisplayName("Регистрируем пользователя и пытаемся войти под его данными")
     public void registerAndAuthTest() {
-        String name = "test"+ UUID.randomUUID().toString().replace("-","").substring(0, 12);
-        String password = UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        String name = ApiUtility.genNick();
+        String password = ApiUtility.genPass();
         UtilityRegister utilityRegister = ApiUtility.registerAndReturnData(URL, name, password);
 
         RegisterAccountResponse response = Allure.step("Авторизуемся и запрашиваем статистику своего аккаунта", () -> given()
@@ -74,8 +74,8 @@ public class SecurityApiTest extends TestBaseAPI {
     @Owner("kriksson")
     @DisplayName("Попытка зарегистрировать аккаунт с уже занятым ником должна вернуть 409")
     public void unSuccessfulRegisterWithAlreadyExistNickname() {
-        String name = "test"+ UUID.randomUUID().toString().replace("-","").substring(0, 12);
-        String password = UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        String name = ApiUtility.genNick();
+        String password = ApiUtility.genPass();
         Allure.step("Регистрируем аккаунт с исходными данными", () -> {
             ApiUtility.registerAndReturnData(URL, name, password);
         });
@@ -113,7 +113,7 @@ public class SecurityApiTest extends TestBaseAPI {
     })
     @DisplayName("Попытка зарегистрировать аккаунт с пустым или пробельным ником")
     public void unSuccessfulRegisterAccountWithEmptyOrSpaceName(String name) {
-        String password =  UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        String password =  ApiUtility.genPass();
         Allure.step("Пробуем создать ник с невалидным аргументом", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -146,7 +146,7 @@ public class SecurityApiTest extends TestBaseAPI {
     })
     @DisplayName("Попытка зарегистрировать аккаунт с слишком длинным ником")
     public void unSuccessfulRegisterAccountWithInvalidSizeName(String name) {
-        String password =  UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        String password =  ApiUtility.genPass();
         ApiError response = Allure.step("Пробуем создать ник с невалидным аргументом", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -185,7 +185,7 @@ public class SecurityApiTest extends TestBaseAPI {
     @MethodSource("validNames")
     @DisplayName("Регистрация ников в рамках границы")
     public void successfulRegisterWithValidNickname(String name) {
-        String password =  UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        String password =  ApiUtility.genPass();
         RegisterAccountResponse response = Allure.step("Пробуем создать ник с валидной границей аргументом", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -216,7 +216,7 @@ public class SecurityApiTest extends TestBaseAPI {
     @MethodSource("invalidPasswords")
     @DisplayName("Попытка зарегистрировать аккаунт с слишком длинным и коротким паролем")
     public void unSuccessfulRegisterAccountWithInvalidPassword(String password) {
-        String name =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
+        String name =  ApiUtility.genNick();
         ApiError response = Allure.step("Пробуем создать аккаунт с невалидным паролем", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -247,7 +247,7 @@ public class SecurityApiTest extends TestBaseAPI {
     @NullSource
     @DisplayName("Попытка зарегистрировать аккаунт с null паролем")
     public void unSuccessfulRegisterAccountWithInvalidSizePassword(String password) {
-        String name =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
+        String name =  ApiUtility.genNick();
         ApiError response = Allure.step("Пробуем создать аккаунт с пустым паролем", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -278,7 +278,7 @@ public class SecurityApiTest extends TestBaseAPI {
     @EmptySource
     @DisplayName("Попытка зарегистрировать аккаунт с пустым паролем")
     public void unSuccessfulRegisterAccountWithEmptyPassword(String password) {
-        String name =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
+        String name =  ApiUtility.genNick();
         Allure.step("Пробуем создать аккаунт с пустым паролем", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -323,7 +323,7 @@ public class SecurityApiTest extends TestBaseAPI {
     @MethodSource("validPasswords")
     @DisplayName("Регистрация аккаунтов с паролем в рамках границы")
     public void successfulRegisterWithValidPassword(String password) {
-        String name =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
+        String name =  ApiUtility.genNick();
         RegisterAccountResponse response = Allure.step("Пробуем создать аккаунт с валидной границей паролей", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -353,9 +353,9 @@ public class SecurityApiTest extends TestBaseAPI {
     @Owner("Kriksson")
     @DisplayName("Авторизованный пользователь не может зарегистрировать другого пользователя в текущей сессии")
     public void unsuccessfulRegisterFromAuthorizedUser() {
-        String name =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
-        String newName =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
-        String password =  UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        String name =  ApiUtility.genNick();
+        String newName =  ApiUtility.genNick();
+        String password =  ApiUtility.genPass();
         UtilityRegister util = ApiUtility.registerAndReturnData(URL, name, password);
 
         Allure.step("Авторизуемся под созданным аккаунтом", () -> {
@@ -395,9 +395,9 @@ public class SecurityApiTest extends TestBaseAPI {
     @Owner("kriksson")
     @DisplayName("Вход с неправильным паролем")
     public void loginWithInvalidPassword() {
-        String name =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
-        String correctPassword =  UUID.randomUUID().toString().replace("-","").substring(0, 19);
-        String unCorrectPassword =  UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        String name =  ApiUtility.genNick();
+        String correctPassword =  ApiUtility.genPass();
+        String unCorrectPassword =  ApiUtility.genPass();
         UtilityRegister util = ApiUtility.registerAndReturnData(URL, name, correctPassword);
 
         Allure.step("Авторизуемся в созданный аккаунт под неправильным паролем", () -> {
@@ -416,8 +416,8 @@ public class SecurityApiTest extends TestBaseAPI {
     @Owner("kriksson")
     @DisplayName("Вход с несуществующим именем")
     public void loginWithValidNickname() {
-        String name =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
-        String password =  UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        String name =  ApiUtility.genNick();
+        String password =  ApiUtility.genPass();
         Allure.step("Авторизуемся в созданный аккаунт под несуществующим ником", () -> {
             given()
                     .auth().preemptive().basic(name, password)
@@ -461,8 +461,8 @@ public class SecurityApiTest extends TestBaseAPI {
     @Owner("kriksson")
     @DisplayName("Выход завершает сессию")
     public void logoutKilledSessionTest() {
-        String name =   "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
-        String password =  UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        String name =   ApiUtility.genNick();
+        String password =  ApiUtility.genPass();
         UtilityRegister util = ApiUtility.registerAndReturnData(URL, name, password);
 
         Allure.step("Авторизовываемся под зарегистрированным ником и делаем GET запрос", () -> {

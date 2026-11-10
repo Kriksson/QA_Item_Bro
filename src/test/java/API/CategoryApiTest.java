@@ -12,7 +12,6 @@ import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
-import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
@@ -75,8 +74,8 @@ public class CategoryApiTest extends TestBaseAPI{
     @Owner("kriksson")
     @DisplayName("Обычный пользователь пытается создать категорию")
     public void unsuccessfulCreateCategoryTest() {
-        String name = "test"+ UUID.randomUUID().toString().replace("-","").substring(0, 12);
-        String password = UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        String name = ApiUtility.genNick();
+        String password = ApiUtility.genPass();
         UtilityRegister util = ApiUtility.registerAndReturnData(URL, name, password);
 
         ApiError api = Allure.step("Пользователь пытается создать категорию", () -> given()
@@ -285,6 +284,35 @@ public class CategoryApiTest extends TestBaseAPI{
                     .extract().jsonPath().getList(".", CategoryDTO.class);
 
             Assert.assertFalse(categories.stream().anyMatch(x -> x.name().equals("Grand Theft Auto VI")));
+        });
+    }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Обычный пользователь и гость не могут архивировать категории")
+    public void unsuccessfulDeleteCategoryWithoutPermsTest() {
+        String name = ApiUtility.genNick();
+        String password = ApiUtility.genPass();
+        UtilityRegister util = ApiUtility.registerAndReturnData(URL, name, password);
+
+        Allure.step("Гость пытается архивировать категорию", () -> {
+            given()
+                    .when()
+                    .patch(URL+"/api/games/1/delete")
+                    .then()
+                    .log().all()
+                    .statusCode(403);
+        });
+
+        Allure.step("Пользователь без админки пытается архивировать категорию", () -> {
+            given()
+                    .when()
+                    .header(util.csrf().headerName(), util.csrf().token())
+                    .auth().preemptive().basic(name, password)
+                    .patch(URL+"/api/games/1/delete")
+                    .then()
+                    .log().all()
+                    .statusCode(403);
         });
     }
 }

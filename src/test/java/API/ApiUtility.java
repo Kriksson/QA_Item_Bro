@@ -9,6 +9,8 @@ import io.restassured.filter.session.SessionFilter;
 import io.restassured.http.ContentType;
 
 
+import java.util.UUID;
+
 import static io.restassured.RestAssured.given;
 
 public class ApiUtility {
@@ -40,5 +42,13 @@ public class ApiUtility {
         });
 
         return new UtilityRegister(csrf, filter,response, new RegisterAccountBody(name, password));
+    }
+
+    public static String genNick() {
+        return "test"+ UUID.randomUUID().toString().replace("-","").substring(0, 12);
+    }
+
+    public static String genPass() {
+        return UUID.randomUUID().toString().replace("-","").substring(0, 19);
     }
 }
