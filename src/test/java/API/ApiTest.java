@@ -393,4 +393,56 @@ public class ApiTest {
                 .log().all()
                 .statusCode(403));
     }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Вход с неправильным паролем")
+    public void loginWithInvalidPassword() {
+        String name =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
+        String correctPassword =  UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        String unCorrectPassword =  UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        UtilityRegister util = ApiUtility.registerAndReturnData(URL, name, correctPassword);
+
+        Allure.step("Авторизуемся в созданный аккаунт под неправильным паролем", () -> {
+            given()
+                    .filter(util.sessionFilter())
+                    .auth().preemptive().basic(name, unCorrectPassword)
+                    .when()
+                    .get(URL+"/api/user/me")
+                    .then()
+                    .log().all()
+                    .statusCode(401);
+        });
+    }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Вход с несуществующим именем")
+    public void loginWithValidNickname() {
+        String name =  "test_"+UUID.randomUUID().toString().replace("-","").substring(0, 12);
+        String password =  UUID.randomUUID().toString().replace("-","").substring(0, 19);
+        Allure.step("Авторизуемся в созданный аккаунт под несуществующим ником", () -> {
+            given()
+                    .auth().preemptive().basic(name, password)
+                    .when()
+                    .get(URL+"/api/user/me")
+                    .then()
+                    .log().all()
+                    .statusCode(401);
+        });
+    }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Доступ к /api/user/me без авторизации запрещён")
+    public void unsuccessfulRequestUserMe() {
+        Allure.step("Делаем запрос на /api/user/me без авторизации", () -> {
+            given().
+                    when()
+                    .get(URL+"/api/user/me")
+                    .then()
+                    .log().all()
+                    .statusCode(401);
+        });
+    }
 }
