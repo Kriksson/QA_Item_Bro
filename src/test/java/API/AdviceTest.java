@@ -3,6 +3,7 @@ package API;
 import API.Records.*;
 import io.qameta.allure.Allure;
 import io.qameta.allure.Owner;
+import io.restassured.filter.session.SessionFilter;
 import io.restassured.http.ContentType;
 import org.junit.Assert;
 import org.junit.jupiter.api.DisplayName;
@@ -605,9 +606,7 @@ public class AdviceTest extends TestBaseAPI{
                 .statusCode(200)
                 .extract().jsonPath().getList("content", AdviceDTO.class));
 
-        Allure.step("Проверяем что в списке есть отслеживаемое объявление", () -> {
-            Assert.assertTrue(adviceDTOList.stream().anyMatch(x -> x.name().equals(dAdvice.name())));
-        });
+        Allure.step("Проверяем что в списке есть отслеживаемое объявление", () -> Assert.assertTrue(adviceDTOList.stream().anyMatch(x -> x.name().equals(dAdvice.name()))));
 
         Allure.step("Архивируем объявление", () -> {
             given()
@@ -630,8 +629,57 @@ public class AdviceTest extends TestBaseAPI{
                 .statusCode(200)
                 .extract().jsonPath().getList("content", AdviceDTO.class));
 
-        Allure.step("Проверяем что отслеживаемое объявление пропала из списка", () -> {
-            Assert.assertFalse(newAdviceDTOList.stream().anyMatch(x -> x.name().equals(dAdvice.name())));
+        Allure.step("Проверяем что отслеживаемое объявление пропала из списка", () -> Assert.assertFalse(newAdviceDTOList.stream().anyMatch(x -> x.name().equals(dAdvice.name()))));
+    }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Админ может архивировать чужое объявление")
+    public void adminDeleteAnyoneAdviceTest() {
+        String nick = ApiUtility.genNick();
+        String password = ApiUtility.genPass();
+        UtilityRegister util = ApiUtility.registerAndReturnData(URL, nick, password);
+        CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
+
+        Allure.step("Авторизуемся в аккаунт", () -> {
+            given()
+                    .filter(util.sessionFilter())
+                    .auth().preemptive().basic(nick, password)
+                    .when()
+                    .get(URL+"/api/user/me")
+                    .then()
+                    .log().all()
+                    .statusCode(200);
+        });
+
+        AdviceDTO advice = Allure.step("Создаём объявление", () -> {
+            CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 1L);
+            return given()
+                    .filter(util.sessionFilter())
+                    .header(util.csrf().headerName(),  util.csrf().token())
+                    .contentType(ContentType.JSON)
+                    .body(body)
+                    .when()
+                    .post(URL+"/api/advices")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(AdviceDTO.class);
+        });
+
+        AuthorizedSession adminSes = ApiUtility.authAdmin(URL);
+        CsrfResponse csrf = adminSes.csrf();
+        SessionFilter filter = adminSes.sessionFilter();
+
+        Allure.step("Администратор архивирует чужое объявление", () -> {
+            given()
+                    .filter(filter)
+                    .header(csrf.headerName(), csrf.token())
+                    .when()
+                    .delete(URL+"/api/advices/" + advice.id())
+                    .then()
+                    .log().all()
+                    .statusCode(204);
         });
     }
 }
