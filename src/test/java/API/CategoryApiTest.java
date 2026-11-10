@@ -224,4 +224,67 @@ public class CategoryApiTest extends TestBaseAPI{
         Allure.step("Проверяем что ошибка создания связана с тем что категория уже создана", () ->
                 Assert.assertEquals("game already created", api.message()));
     }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Администратор архивирует категорию и она пропадает из общего списка")
+    public void successfulDeleteCategoryTest() {
+        SessionFilter filter = new SessionFilter();
+        CsrfResponse csrf = given()
+                .filter(filter).when().get(URL+"/csrf").then().extract().body().as(CsrfResponse.class);
+        Allure.step("Администратор авторизуется", () -> given()
+                        .auth().preemptive().basic("ADMIN", "Admin123!")
+                        .filter(filter)
+                        .get(URL+"/api/user/me")
+                        .then()
+                        .log().all())
+                .body("userRole", equalTo("ADMIN"))
+                .statusCode(200);
+
+        CategoryDTO createdCategory = Allure.step("Администратор создаёт категорию", () -> given()
+                .filter(filter)
+                .header(csrf.headerName(), csrf.token())
+                .contentType(ContentType.JSON)
+                .body(new CategoryBody("Grand Theft Auto VI"))
+                .when()
+                .post(URL+"/api/games")
+                .then()
+                .log().all()
+                .statusCode(201)
+                .extract().body().as(CategoryDTO.class)
+        );
+
+        Allure.step("Проверяем что категория появилась в списках", () -> {
+            List<CategoryDTO> categories = given()
+                    .when()
+                    .get(URL+"/api/games")
+                    .then()
+                    .log().all()
+                    .extract().jsonPath().getList(".", CategoryDTO.class);
+
+            Assert.assertTrue(categories.stream().anyMatch(x -> x.name().equals("Grand Theft Auto VI")));
+        });
+
+        Allure.step("Администратор архивирует категорию", () -> {
+            given()
+                    .filter(filter)
+                    .header(csrf.headerName(), csrf.token())
+                    .when()
+                    .patch(URL+"/api/games/"+createdCategory.id()+"/delete")
+                    .then()
+                    .log().all()
+                    .statusCode(204);
+        });
+
+        Allure.step("Проверяем что категория больше не в списках", () -> {
+            List<CategoryDTO> categories = given()
+                    .when()
+                    .get(URL+"/api/games")
+                    .then()
+                    .log().all()
+                    .extract().jsonPath().getList(".", CategoryDTO.class);
+
+            Assert.assertFalse(categories.stream().anyMatch(x -> x.name().equals("Grand Theft Auto VI")));
+        });
+    }
 }
