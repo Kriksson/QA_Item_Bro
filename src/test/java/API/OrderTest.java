@@ -542,4 +542,107 @@ public class OrderTest extends TestBaseAPI {
 
         Allure.step("Проверяем что баланс пополнился на сумму заказа", () -> Assert.assertEquals(0, newSellerAccountInfo.balance().subtract(sellerAccountInfo.balance()).compareTo(BigDecimal.valueOf(199))));
     }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Продавец отменяет открытый заказ")
+    public void successfulCancelOrderBySeller() {
+        String sellerName = ApiUtility.genNick();
+        String sellerPassword = ApiUtility.genPass();
+        UtilityRegister sellerUtil =  ApiUtility.registerAndReturnData(URL, sellerName, sellerPassword);
+
+        AuthorizedSession majorSes = ApiUtility.authMajor(URL);
+
+        CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
+
+        AdviceDTO createdAdvice =  Allure.step("Продавец создаёт объявление", () -> {
+            HashMap<String, Object> createBody = new HashMap<>();
+            createBody.put("name", ApiUtility.genNick());
+            createBody.put("game_id", createdCategory.id());
+            createBody.put("price", BigDecimal.valueOf(199));
+            return given()
+                    .header(sellerUtil.csrf().headerName(), sellerUtil.csrf().token())
+                    .filter(sellerUtil.sessionFilter())
+                    .auth().preemptive().basic(sellerName, sellerPassword)
+                    .contentType(ContentType.JSON)
+                    .body(createBody)
+                    .when()
+                    .post(URL+"/api/advices")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(AdviceDTO.class);
+        });
+
+        OrderDTO createdOrder = Allure.step("Покупатель покупает товар", () -> {
+            Map<String, Long> body =  new HashMap<>();
+            body.put("id", createdAdvice.id());
+            return given()
+                    .filter(majorSes.sessionFilter())
+                    .header(majorSes.csrf().headerName(), majorSes.csrf().token())
+                    .body(body)
+                    .contentType(ContentType.JSON)
+                    .when()
+                    .post(URL+"/api/orders/")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(OrderDTO.class);
+        });
+
+        Allure.step("Проверяем что заказ открыт", () -> Assert.assertEquals("OPENED", createdOrder.orderStatus()));
+
+        RegisterAccountResponse buyerAccountInfo = Allure.step("Запрашиваем баланс покупателя перед отменой", () -> given()
+                .filter(majorSes.sessionFilter())
+                .when()
+                .get(URL+"/api/user/me")
+                .then()
+                .log().all()
+                .statusCode(200)
+                .extract().body().as(RegisterAccountResponse.class));
+
+        CsrfResponse sellerCsrf = Allure.step("Получаем CSRF для сессии продавца", () -> given()
+                .filter(sellerUtil.sessionFilter())
+                .when()
+                .get(URL+"/csrf")
+                .then()
+                .log().all()
+                .statusCode(200)
+                .extract().body().as(CsrfResponse.class));
+
+        Allure.step("Продавец отменяет заказ", () -> {
+            given()
+                    .filter(sellerUtil.sessionFilter())
+                    .header(sellerCsrf.headerName(), sellerCsrf.token())
+                    .when()
+                    .patch(URL+"/api/orders/"+createdOrder.id()+"/cancel")
+                    .then()
+                    .log().all()
+                    .statusCode(204);
+        });
+
+        Allure.step("Проверяем что заказ отменён", () -> {
+            OrderDTO order = given()
+                    .filter(majorSes.sessionFilter())
+                    .when()
+                    .get(URL+"/api/orders/"+createdOrder.id())
+                    .then()
+                    .log().all()
+                    .statusCode(200)
+                    .extract().body().as(OrderDTO.class);
+
+            Assert.assertEquals("REFUND", order.orderStatus());
+        });
+
+        RegisterAccountResponse newBuyerAccountInfo = Allure.step("Запрашиваем баланс покупателя повторно", () -> given()
+                .filter(majorSes.sessionFilter())
+                .when()
+                .get(URL+"/api/user/me")
+                .then()
+                .log().all()
+                .statusCode(200)
+                .extract().body().as(RegisterAccountResponse.class));
+
+        Allure.step("Проверяем что покупателю вернулась стоимость заказа", () -> Assert.assertEquals(0, newBuyerAccountInfo.balance().subtract(buyerAccountInfo.balance()).compareTo(createdOrder.price())));
+    }
 }
