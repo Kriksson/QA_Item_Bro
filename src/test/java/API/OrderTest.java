@@ -166,4 +166,51 @@ public class OrderTest extends TestBaseAPI {
                     .body("message", equalTo("Объявление не найдено"));
         });
     }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Гость не может создать заказ")
+    public void unsuccessfulBuyNonExistCategory() {
+        String sellerName = ApiUtility.genNick();
+        String sellerPassword = ApiUtility.genPass();
+        UtilityRegister sellerUtil = ApiUtility.registerAndReturnData(URL, sellerName, sellerPassword);
+        CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
+
+        CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 199L);
+        AdviceDTO createdAdvice = Allure.step("Создание тестового объявления", () -> given()
+                .header(sellerUtil.csrf().headerName(), sellerUtil.csrf().token())
+                .filter(sellerUtil.sessionFilter())
+                .contentType(ContentType.JSON)
+                .auth().preemptive().basic(sellerName, sellerPassword)
+                .body(body)
+                .when()
+                .post(URL+"/api/advices")
+                .then()
+                .log().all()
+                .statusCode(201)
+                .extract().body().as(AdviceDTO.class));
+
+        Map<String, Long> createOrderBody = new HashMap<>();
+        createOrderBody.put("id", createdAdvice.id());
+
+        CsrfResponse csrf = Allure.step("Получаем CSRF гостя", () -> given()
+                .when()
+                .get(URL+"/csrf")
+                .then()
+                .log().all()
+                .statusCode(200)
+                .extract().body().as(CsrfResponse.class));
+
+        Allure.step("Создание заказа гостем приведёт к 403", () -> {
+            given()
+                    .header(csrf.headerName(), csrf.token())
+                    .body(createOrderBody)
+                    .contentType(ContentType.JSON)
+                    .when()
+                    .post(URL+"/api/orders/")
+                    .then()
+                    .log().all()
+                    .statusCode(403);
+        });
+    }
 }
