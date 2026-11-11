@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
@@ -330,6 +331,121 @@ public class OrderTest extends TestBaseAPI {
                     .log().all()
                     .statusCode(403)
                     .body("message", equalTo("У вас нет прав"));
+        });
+    }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("GET /api/orders возвращает заказы пользователя")
+    public void successfulGetOrders() {
+        String sellerName = ApiUtility.genNick();
+        String sellerPassword = ApiUtility.genPass();
+        UtilityRegister sellerUtil = ApiUtility.registerAndReturnData(URL, sellerName, sellerPassword);
+
+        CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
+
+        AdviceDTO firstCreatedAdvice =  Allure.step("Продавец создаёт объявление №1", () -> {
+            HashMap<String, Object> createBody = new HashMap<>();
+            createBody.put("name", ApiUtility.genNick());
+            createBody.put("game_id", createdCategory.id());
+            createBody.put("price", BigDecimal.valueOf(199));
+            return given()
+                    .header(sellerUtil.csrf().headerName(), sellerUtil.csrf().token())
+                    .filter(sellerUtil.sessionFilter())
+                    .auth().preemptive().basic(sellerName, sellerPassword)
+                    .contentType(ContentType.JSON)
+                    .body(createBody)
+                    .when()
+                    .post(URL+"/api/advices")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(AdviceDTO.class);
+        });
+
+        AdviceDTO secondCreatedAdvice =  Allure.step("Продавец создаёт объявление №2", () -> {
+            HashMap<String, Object> createBody = new HashMap<>();
+            createBody.put("name", ApiUtility.genNick());
+            createBody.put("game_id", createdCategory.id());
+            createBody.put("price", BigDecimal.valueOf(199));
+            return given()
+                    .header(sellerUtil.csrf().headerName(), sellerUtil.csrf().token())
+                    .filter(sellerUtil.sessionFilter())
+                    .auth().preemptive().basic(sellerName, sellerPassword)
+                    .contentType(ContentType.JSON)
+                    .body(createBody)
+                    .when()
+                    .post(URL+"/api/advices")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(AdviceDTO.class);
+        });
+
+        AuthorizedSession majorSes = ApiUtility.authMajor(URL);
+        SessionFilter majorFilter = majorSes.sessionFilter();
+        CsrfResponse majorCsrf = majorSes.csrf();
+
+        OrderDTO firstOrder = Allure.step("Покупатель покупает первый товар", () -> {
+            Map<String, Long> body =  new HashMap<>();
+            body.put("id", firstCreatedAdvice.id());
+
+            return given()
+                    .filter(majorFilter)
+                    .header(majorCsrf.headerName(), majorCsrf.token())
+                    .body(body)
+                    .contentType(ContentType.JSON)
+                    .when()
+                    .post(URL+"/api/orders/")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(OrderDTO.class);
+        });
+        OrderDTO secondOrder = Allure.step("Покупатель покупает первый товар", () -> {
+            Map<String, Long> body =  new HashMap<>();
+            body.put("id", secondCreatedAdvice.id());
+
+            return given()
+                    .filter(majorFilter)
+                    .header(majorCsrf.headerName(), majorCsrf.token())
+                    .body(body)
+                    .contentType(ContentType.JSON)
+                    .when()
+                    .post(URL+"/api/orders/")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(OrderDTO.class);
+        });
+
+        Allure.step("Проверяем что в списках заказов у покупателя появились созданные заказы", () -> {
+            List<OrderDTO> orders = given()
+                    .filter(majorFilter)
+                    .when()
+                    .get(URL+"/api/orders")
+                    .then()
+                    .log().all()
+                    .statusCode(200)
+                    .extract().jsonPath().getList(".",  OrderDTO.class);
+
+            Assert.assertTrue(orders.stream().anyMatch(x -> x.adviceDTO().id().equals(firstOrder.adviceDTO().id())));
+            Assert.assertTrue(orders.stream().anyMatch(x -> x.adviceDTO().id().equals(secondOrder.adviceDTO().id())));
+        });
+
+        Allure.step("Проверяем что в списках заказов у продавца появились созданные заказы", () -> {
+            List<OrderDTO> orders = given()
+                    .filter(sellerUtil.sessionFilter())
+                    .auth().preemptive().basic(sellerName, sellerPassword)
+                    .when()
+                    .get(URL+"/api/orders")
+                    .then()
+                    .log().all()
+                    .statusCode(200)
+                    .extract().jsonPath().getList(".",  OrderDTO.class);
+
+            Assert.assertTrue(orders.stream().anyMatch(x -> x.adviceDTO().id().equals(firstOrder.id())));
+            Assert.assertTrue(orders.stream().anyMatch(x -> x.adviceDTO().id().equals(secondOrder.id())));
         });
     }
 }
