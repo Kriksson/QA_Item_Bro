@@ -139,4 +139,31 @@ public class OrderTest extends TestBaseAPI {
                     .body("message", equalTo("Недостаточно средств"));
         });
     }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Покупка несуществующего объявления отклоняется")
+    public void unsuccessfulBuyNonExistAdvice() {
+        String name = ApiUtility.genNick();
+        String password = ApiUtility.genPass();
+        UtilityRegister util =  ApiUtility.registerAndReturnData(URL, name, password);
+
+        Map<String, Long> createOrderBody = new HashMap<>();
+        createOrderBody.put("id", 999L);
+
+        Allure.step("Пытаемся купить несуществующий товар", () -> {
+            given()
+                    .filter(util.sessionFilter())
+                    .header(util.csrf().headerName(), util.csrf().token())
+                    .auth().preemptive().basic(name, password)
+                    .contentType(ContentType.JSON)
+                    .body(createOrderBody)
+                    .when()
+                    .post(URL+"/api/orders/")
+                    .then()
+                    .log().all()
+                    .statusCode(404)
+                    .body("message", equalTo("Объявление не найдено"));
+        });
+    }
 }
