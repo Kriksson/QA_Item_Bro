@@ -1,6 +1,7 @@
 package API;
 
 import API.Records.*;
+import java.util.HashMap;
 import io.qameta.allure.Allure;
 import io.qameta.allure.Owner;
 import io.restassured.filter.session.SessionFilter;
@@ -45,11 +46,14 @@ public class CategoryApiTest extends TestBaseAPI{
         SessionFilter filter = admin.sessionFilter();
         CsrfResponse csrf = admin.csrf();
 
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", "ChatGPT");
+
         CategoryDTO category = Allure.step("Администратор создаёт категорию", () -> given()
                 .filter(filter)
                 .header(csrf.headerName(), csrf.token())
                 .contentType(ContentType.JSON)
-                .body(new CategoryBody("ChatGPT"))
+                .body(body)
                 .when()
                 .post(URL+"/api/games")
                 .then()
@@ -70,12 +74,15 @@ public class CategoryApiTest extends TestBaseAPI{
         String password = ApiUtility.genPass();
         UtilityRegister util = ApiUtility.registerAndReturnData(URL, name, password);
 
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", "Claude Code");
+
         ApiError api = Allure.step("Пользователь пытается создать категорию", () -> given()
                 .filter(util.sessionFilter())
                 .auth().preemptive().basic(name, password)
                 .header(util.csrf().headerName(), util.csrf().token())
                 .contentType(ContentType.JSON)
-                .body(new CategoryBody("Claude Code"))
+                .body(body)
                 .when()
                 .post(URL+"/api/games")
                 .then()
@@ -117,11 +124,14 @@ public class CategoryApiTest extends TestBaseAPI{
         SessionFilter filter = admin.sessionFilter();
         CsrfResponse csrf = admin.csrf();
 
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", name);
+
         Allure.step("Администратор не может создать категорию с пустым названием", () -> given()
                 .filter(filter)
                 .header(csrf.headerName(), csrf.token())
                 .contentType(ContentType.JSON)
-                .body(new CategoryBody(name))
+                .body(body)
                 .when()
                 .post(URL+"/api/games")
                 .then()
@@ -141,11 +151,14 @@ public class CategoryApiTest extends TestBaseAPI{
         SessionFilter filter = admin.sessionFilter();
         CsrfResponse csrf = admin.csrf();
 
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", name);
+
         Allure.step("Администратор создаёт категорию", () -> given()
                 .filter(filter)
                 .header(csrf.headerName(), csrf.token())
                 .contentType(ContentType.JSON)
-                .body(new CategoryBody(name))
+                .body(body)
                 .when()
                 .post(URL+"/api/games")
                 .then()
@@ -167,11 +180,14 @@ public class CategoryApiTest extends TestBaseAPI{
             Assert.assertEquals("Warcraft", category.name());
         });
 
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", "Warcraft");
+
         ApiError api = Allure.step("Администратор создаёт категорию №2", () -> given()
                 .filter(filter)
                 .header(csrf.headerName(), csrf.token())
                 .contentType(ContentType.JSON)
-                .body(new CategoryBody("Warcraft"))
+                .body(body)
                 .when()
                 .post(URL+"/api/games")
                 .then()

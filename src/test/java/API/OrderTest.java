@@ -31,7 +31,10 @@ public class OrderTest extends TestBaseAPI {
 
         CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
 
-        CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 199L);
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", ApiUtility.genNick());
+        body.put("game_id", createdCategory.id());
+        body.put("price", BigDecimal.valueOf(199));
         AdviceDTO createdAdvice = Allure.step("Создание тестового объявления", () -> given()
                 .header(util.csrf().headerName(), util.csrf().token())
                 .filter(util.sessionFilter())
@@ -75,8 +78,9 @@ public class OrderTest extends TestBaseAPI {
 
         Allure.step("Проверяем данные созданного заказа", () -> {
             Assert.assertEquals("OPENED", createdOrder.orderStatus());
-            Assert.assertTrue(EqualsBuilder.reflectionEquals(createdOrder.adviceDTO(), createdAdvice));
-            Assert.assertEquals(Long.valueOf(199), createdOrder.price());
+            Assert.assertTrue(EqualsBuilder.reflectionEquals(createdOrder.adviceDTO(), createdAdvice, "price"));
+            Assert.assertEquals(0, createdOrder.adviceDTO().price().compareTo(createdAdvice.price()));
+            Assert.assertEquals(0, createdOrder.price().compareTo(BigDecimal.valueOf(199)));
         });
 
         Allure.step("Проверяем баланс покупателя, должно списаться 199", () -> {
@@ -104,7 +108,10 @@ public class OrderTest extends TestBaseAPI {
         UtilityRegister sellerUtil = ApiUtility.registerAndReturnData(URL, sellerName, sellerPassword);
         CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
 
-        CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 199L);
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", ApiUtility.genNick());
+        body.put("game_id", createdCategory.id());
+        body.put("price", BigDecimal.valueOf(199));
         AdviceDTO createdAdvice = Allure.step("Создание тестового объявления", () -> given()
                 .header(sellerUtil.csrf().headerName(), sellerUtil.csrf().token())
                 .filter(sellerUtil.sessionFilter())
@@ -176,7 +183,10 @@ public class OrderTest extends TestBaseAPI {
         UtilityRegister sellerUtil = ApiUtility.registerAndReturnData(URL, sellerName, sellerPassword);
         CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
 
-        CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 199L);
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", ApiUtility.genNick());
+        body.put("game_id", createdCategory.id());
+        body.put("price", BigDecimal.valueOf(199));
         AdviceDTO createdAdvice = Allure.step("Создание тестового объявления", () -> given()
                 .header(sellerUtil.csrf().headerName(), sellerUtil.csrf().token())
                 .filter(sellerUtil.sessionFilter())
@@ -236,7 +246,10 @@ public class OrderTest extends TestBaseAPI {
         CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
 
         AdviceDTO createdAdvice =  Allure.step("Продавец создаёт объявление", () -> {
-            CreateAdviceBody createBody = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 199L);
+            HashMap<String, Object> createBody = new HashMap<>();
+            createBody.put("name", ApiUtility.genNick());
+            createBody.put("game_id", createdCategory.id());
+            createBody.put("price", BigDecimal.valueOf(199));
             return given()
                     .header(sellerUtil.csrf().headerName(), sellerUtil.csrf().token())
                     .filter(sellerUtil.sessionFilter())

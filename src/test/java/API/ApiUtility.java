@@ -1,6 +1,7 @@
 package API;
 
 import API.Records.*;
+import java.util.HashMap;
 import io.qameta.allure.Allure;
 import io.restassured.filter.session.SessionFilter;
 import io.restassured.http.ContentType;
@@ -23,9 +24,13 @@ public class ApiUtility {
                 .log().all()
                 .statusCode(200)
                 .extract().body().as(CsrfResponse.class));
+        HashMap<String, String> body = new HashMap<>();
+        body.put("name", name);
+        body.put("password", password);
+
         RegisterAccountResponse response = Allure.step("Регистрируем пользователя", () -> given()
                 .filter(filter)
-                .body(new RegisterAccountBody(name, password))
+                .body(body)
                 .contentType(ContentType.JSON)
                 .header(csrf.headerName(), csrf.token())
                 .when()
@@ -35,7 +40,7 @@ public class ApiUtility {
                 .statusCode(201)
                 .extract().body().as(RegisterAccountResponse.class));
 
-        return new UtilityRegister(csrf, filter,response, new RegisterAccountBody(name, password));
+        return new UtilityRegister(csrf, filter, response, body);
     }
 
     public static CategoryDTO createTestCategory(String URL, String categoryName) {
@@ -43,11 +48,14 @@ public class ApiUtility {
         CsrfResponse csrf = session.csrf();
         SessionFilter filter = session.sessionFilter();
 
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", categoryName);
+
         return Allure.step("Создание тестовой категории", () -> given()
                 .filter(filter)
                 .header(csrf.headerName(), csrf.token())
                 .contentType(ContentType.JSON)
-                .body(new CategoryBody(categoryName))
+                .body(body)
                 .when()
                 .post(URL+"/api/games")
                 .then()

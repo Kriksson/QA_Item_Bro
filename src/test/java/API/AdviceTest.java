@@ -1,6 +1,7 @@
 package API;
 
 import API.Records.*;
+import java.util.HashMap;
 import io.qameta.allure.Allure;
 import io.qameta.allure.Owner;
 import io.restassured.filter.session.SessionFilter;
@@ -13,6 +14,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -44,7 +46,10 @@ public class AdviceTest extends TestBaseAPI{
                     .statusCode(200);
         });
         String adviceName = ApiUtility.genNick();
-        CreateAdviceBody body = new CreateAdviceBody(adviceName, testCategory.id(), 1000L);
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", adviceName);
+        body.put("game_id", testCategory.id());
+        body.put("price", BigDecimal.valueOf(1000));
         AdviceDTO createdAdvice = Allure.step("Создаём объявление в категории", () -> given()
                 .filter(util.sessionFilter())
                 .header(util.csrf().headerName(), util.csrf().token())
@@ -60,7 +65,7 @@ public class AdviceTest extends TestBaseAPI{
         Allure.step("Проверяем созданное объявление", () -> {
             Assert.assertEquals(nick, createdAdvice.userSeller().username());
             Assert.assertEquals(adviceName, createdAdvice.name());
-            Assert.assertEquals(Long.valueOf(1000), createdAdvice.price());
+            Assert.assertEquals(0, createdAdvice.price().compareTo(BigDecimal.valueOf(1000L)));
             Assert.assertEquals(testCategory.id(), createdAdvice.game().id());
         });
     }
@@ -78,7 +83,10 @@ public class AdviceTest extends TestBaseAPI{
 
 
         CategoryDTO testCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
-        CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), testCategory.id(), 1000L);
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", ApiUtility.genNick());
+        body.put("game_id", testCategory.id());
+        body.put("price", BigDecimal.valueOf(1000));
         Allure.step("Неудачная попытка создать объявление", () -> given()
                 .header(csrf.headerName(), csrf.token())
                 .contentType(ContentType.JSON)
@@ -124,7 +132,10 @@ public class AdviceTest extends TestBaseAPI{
                 .statusCode(200)
                 .extract().body().as(CsrfResponse.class));
 
-        CreateAdviceBody body = new CreateAdviceBody(name, testCategory.id(), 1000L);
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", name);
+        body.put("game_id", testCategory.id());
+        body.put("price", BigDecimal.valueOf(1000));
 
         Allure.step("Пытаемся создать объявление с невалидным названием", () -> given()
                 .filter(util.sessionFilter())
@@ -180,7 +191,9 @@ public class AdviceTest extends TestBaseAPI{
                 .statusCode(200)
                 .extract().body().as(CsrfResponse.class));
 
-        CreateAdviceWithoutNameBody body = new CreateAdviceWithoutNameBody(testCategory.id(), 1000L);
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("game_id", testCategory.id());
+        body.put("price", BigDecimal.valueOf(1000));
 
         Allure.step("Отправляем объявление без поля name", () -> given()
                 .filter(util.sessionFilter())
@@ -240,7 +253,10 @@ public class AdviceTest extends TestBaseAPI{
                 .statusCode(200)
                 .extract().body().as(CsrfResponse.class));
 
-        CreateAdviceBody body = new CreateAdviceBody(name, testCategory.id(), 1000L);
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", name);
+        body.put("game_id", testCategory.id());
+        body.put("price", BigDecimal.valueOf(1000));
         AdviceDTO createdAdvice = Allure.step("Создаём объявление с названием допустимой длины", () -> given()
                 .filter(util.sessionFilter())
                 .header(csrf.headerName(), csrf.token())
@@ -276,9 +292,9 @@ public class AdviceTest extends TestBaseAPI{
     static Stream<Object> invalidAdvicePrices() {
         return Stream.of(
                 null,
-                -1L,
-                0L,
-                0.99,
+                BigDecimal.valueOf(-1),
+                BigDecimal.ZERO,
+                new BigDecimal("0.99"),
                 "not-a-number"
         );
     }
@@ -313,7 +329,10 @@ public class AdviceTest extends TestBaseAPI{
                 .statusCode(200)
                 .extract().body().as(CsrfResponse.class));
 
-        CreateAdviceWithInvalidPriceBody body = new CreateAdviceWithInvalidPriceBody(ApiUtility.genNick(), testCategory.id(), price);
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", ApiUtility.genNick());
+        body.put("game_id", testCategory.id());
+        body.put("price", price);
 
         Allure.step("Пытаемся создать объявление с невалидной ценой", () -> given()
                 .filter(util.sessionFilter())
@@ -369,7 +388,9 @@ public class AdviceTest extends TestBaseAPI{
                 .statusCode(200)
                 .extract().body().as(CsrfResponse.class));
 
-        CreateAdviceWithoutPriceBody body = new CreateAdviceWithoutPriceBody(ApiUtility.genNick(), testCategory.id());
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", ApiUtility.genNick());
+        body.put("game_id", testCategory.id());
 
         Allure.step("Отправляем объявление без поля price", () -> given()
                 .filter(util.sessionFilter())
@@ -426,7 +447,10 @@ public class AdviceTest extends TestBaseAPI{
                 .extract().body().as(CsrfResponse.class));
 
         String name = ApiUtility.genNick();
-        CreateAdviceBody body = new CreateAdviceBody(name, testCategory.id(), 1L);
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", name);
+        body.put("game_id", testCategory.id());
+        body.put("price", BigDecimal.ONE);
         AdviceDTO createdAdvice = Allure.step("Создаём объявление с ценой 1", () -> given()
                 .filter(util.sessionFilter())
                 .header(csrf.headerName(), csrf.token())
@@ -441,7 +465,7 @@ public class AdviceTest extends TestBaseAPI{
 
         Allure.step("Проверяем минимальную цену созданного объявления", () -> {
             Assert.assertEquals(name, createdAdvice.name());
-            Assert.assertEquals(Long.valueOf(1), createdAdvice.price());
+            Assert.assertEquals(0, createdAdvice.price().compareTo(BigDecimal.ONE));
             Assert.assertEquals(testCategory.id(), createdAdvice.game().id());
         });
 
@@ -456,7 +480,7 @@ public class AdviceTest extends TestBaseAPI{
                     .extract().jsonPath().getList("content", AdviceDTO.class);
 
             Assert.assertEquals(1, advices.size());
-            Assert.assertEquals(Long.valueOf(1), advices.getFirst().price());
+            Assert.assertEquals(0, advices.getFirst().price().compareTo(BigDecimal.ONE));
         });
     }
 
@@ -478,7 +502,10 @@ public class AdviceTest extends TestBaseAPI{
                     .log().all()
                     .statusCode(200);
         });
-        CreateAdviceBody body = new CreateAdviceBody("Test", 100000L, 1L);
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("name", "Test");
+        body.put("game_id", 100000L);
+        body.put("price", BigDecimal.ONE);
         Allure.step("Создаём объявление в несуществующей категории", () -> {
             given()
                     .filter(util.sessionFilter())
@@ -515,7 +542,10 @@ public class AdviceTest extends TestBaseAPI{
         CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
 
         for (int i = 0; i < 5; i++) {
-            CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 1L);
+            HashMap<String, Object> body = new HashMap<>();
+            body.put("name", ApiUtility.genNick());
+            body.put("game_id", createdCategory.id());
+            body.put("price", BigDecimal.ONE);
             Allure.step("Создаём объявление №"+(i+1), () -> {
                 given()
                         .filter(util.sessionFilter())
@@ -527,12 +557,15 @@ public class AdviceTest extends TestBaseAPI{
                         .then()
                         .log().all()
                         .statusCode(201)
-                        .body("name", equalTo(body.name()));
+                        .body("name", equalTo(body.get("name")));
             });
         }
 
         Allure.step("Пытаемся создать 6 объявление", () -> {
-            CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 1L);
+            HashMap<String, Object> body = new HashMap<>();
+            body.put("name", ApiUtility.genNick());
+            body.put("game_id", createdCategory.id());
+            body.put("price", BigDecimal.ONE);
             given()
                     .filter(util.sessionFilter())
                     .header(util.csrf().headerName(), util.csrf().token())
@@ -568,7 +601,10 @@ public class AdviceTest extends TestBaseAPI{
         });
 
         Allure.step("Создаём первое объявление", () -> {
-            CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 1L);
+            HashMap<String, Object> body = new HashMap<>();
+            body.put("name", ApiUtility.genNick());
+            body.put("game_id", createdCategory.id());
+            body.put("price", BigDecimal.ONE);
             given()
                     .filter(util.sessionFilter())
                     .header(util.csrf().headerName(),  util.csrf().token())
@@ -582,7 +618,10 @@ public class AdviceTest extends TestBaseAPI{
         });
 
         AdviceDTO dAdvice = Allure.step("Создаём второе объявление", () -> {
-            CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 1L);
+            HashMap<String, Object> body = new HashMap<>();
+            body.put("name", ApiUtility.genNick());
+            body.put("game_id", createdCategory.id());
+            body.put("price", BigDecimal.ONE);
             return given()
                     .filter(util.sessionFilter())
                     .header(util.csrf().headerName(),  util.csrf().token())
@@ -653,7 +692,10 @@ public class AdviceTest extends TestBaseAPI{
         });
 
         AdviceDTO advice = Allure.step("Создаём объявление", () -> {
-            CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 1L);
+            HashMap<String, Object> body = new HashMap<>();
+            body.put("name", ApiUtility.genNick());
+            body.put("game_id", createdCategory.id());
+            body.put("price", BigDecimal.ONE);
             return given()
                     .filter(util.sessionFilter())
                     .header(util.csrf().headerName(),  util.csrf().token())

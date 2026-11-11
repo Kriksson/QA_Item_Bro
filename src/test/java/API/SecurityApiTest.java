@@ -1,6 +1,7 @@
 package API;
 
 import API.Records.*;
+import java.util.HashMap;
 import io.qameta.allure.Allure;
 import io.qameta.allure.Owner;
 import io.restassured.filter.session.SessionFilter;
@@ -31,7 +32,7 @@ public class SecurityApiTest extends TestBaseAPI {
         UtilityRegister utilityRegister = ApiUtility.registerAndReturnData(URL, name, password);
 
         Allure.step("Сравниваем значения с ожидаемыми", () -> {
-            Assert.assertEquals(utilityRegister.credentials().name(), utilityRegister.profile().name());
+            Assert.assertEquals(utilityRegister.credentials().get("name"), utilityRegister.profile().name());
             Assert.assertEquals("USER", utilityRegister.profile().userRole());
             Assert.assertEquals("0", utilityRegister.profile().balance().toString());
             Assert.assertNull(utilityRegister.profile().avatarUrl());
@@ -51,7 +52,7 @@ public class SecurityApiTest extends TestBaseAPI {
 
         RegisterAccountResponse response = Allure.step("Авторизуемся и запрашиваем статистику своего аккаунта", () -> given()
                 .filter(utilityRegister.sessionFilter())
-                .auth().preemptive().basic(utilityRegister.credentials().name(), utilityRegister.credentials().password())
+                .auth().preemptive().basic(utilityRegister.credentials().get("name"), utilityRegister.credentials().get("password"))
                 .when()
                 .get(URL+"/api/user/me")
                 .then()
@@ -60,7 +61,7 @@ public class SecurityApiTest extends TestBaseAPI {
                 .extract().body().as(RegisterAccountResponse.class));
 
         Allure.step("Сравниваем значения", () -> {
-            Assert.assertEquals(utilityRegister.credentials().name(), response.name());
+            Assert.assertEquals(utilityRegister.credentials().get("name"), response.name());
             Assert.assertEquals(utilityRegister.profile().userRole(), response.userRole());
             Assert.assertEquals(utilityRegister.profile().balance().toString(), response.balance().toString());
             Assert.assertEquals(utilityRegister.profile().avatarUrl(), response.avatarUrl());
@@ -80,6 +81,10 @@ public class SecurityApiTest extends TestBaseAPI {
             ApiUtility.registerAndReturnData(URL, name, password);
         });
 
+        HashMap<String, String> body = new HashMap<>();
+        body.put("name", name);
+        body.put("password", password);
+
         ApiError response = Allure.step("Создаём новую сессию и пробуем создать аккаунт с уже занятым ником", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -92,7 +97,7 @@ public class SecurityApiTest extends TestBaseAPI {
                     .extract().body().as(CsrfResponse.class);
              return given()
                     .filter(filter)
-                    .body(new RegisterAccountBody(name, password))
+                    .body(body)
                     .contentType(ContentType.JSON)
                     .header(csrf.headerName(), csrf.token())
                     .when()
@@ -114,6 +119,10 @@ public class SecurityApiTest extends TestBaseAPI {
     @DisplayName("Попытка зарегистрировать аккаунт с пустым или пробельным ником")
     public void unSuccessfulRegisterAccountWithEmptyOrSpaceName(String name) {
         String password =  ApiUtility.genPass();
+        HashMap<String, String> body = new HashMap<>();
+        body.put("name", name);
+        body.put("password", password);
+
         Allure.step("Пробуем создать ник с невалидным аргументом", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -126,7 +135,7 @@ public class SecurityApiTest extends TestBaseAPI {
                     .extract().body().as(CsrfResponse.class);
             return given()
                     .filter(filter)
-                    .body(new RegisterAccountBody(name, password))
+                    .body(body)
                     .contentType(ContentType.JSON)
                     .header(csrf.headerName(), csrf.token())
                     .when()
@@ -147,6 +156,10 @@ public class SecurityApiTest extends TestBaseAPI {
     @DisplayName("Попытка зарегистрировать аккаунт с слишком длинным ником")
     public void unSuccessfulRegisterAccountWithInvalidSizeName(String name) {
         String password =  ApiUtility.genPass();
+        HashMap<String, String> body = new HashMap<>();
+        body.put("name", name);
+        body.put("password", password);
+
         ApiError response = Allure.step("Пробуем создать ник с невалидным аргументом", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -159,7 +172,7 @@ public class SecurityApiTest extends TestBaseAPI {
                     .extract().body().as(CsrfResponse.class);
             return given()
                     .filter(filter)
-                    .body(new RegisterAccountBody(name, password))
+                    .body(body)
                     .contentType(ContentType.JSON)
                     .header(csrf.headerName(), csrf.token())
                     .when()
@@ -186,6 +199,10 @@ public class SecurityApiTest extends TestBaseAPI {
     @DisplayName("Регистрация ников в рамках границы")
     public void successfulRegisterWithValidNickname(String name) {
         String password =  ApiUtility.genPass();
+        HashMap<String, String> body = new HashMap<>();
+        body.put("name", name);
+        body.put("password", password);
+
         RegisterAccountResponse response = Allure.step("Пробуем создать ник с валидной границей аргументом", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -198,7 +215,7 @@ public class SecurityApiTest extends TestBaseAPI {
                     .extract().body().as(CsrfResponse.class);
             return given()
                     .filter(filter)
-                    .body(new RegisterAccountBody(name, password))
+                    .body(body)
                     .contentType(ContentType.JSON)
                     .header(csrf.headerName(), csrf.token())
                     .when()
@@ -217,6 +234,10 @@ public class SecurityApiTest extends TestBaseAPI {
     @DisplayName("Попытка зарегистрировать аккаунт с слишком длинным и коротким паролем")
     public void unSuccessfulRegisterAccountWithInvalidPassword(String password) {
         String name =  ApiUtility.genNick();
+        HashMap<String, String> body = new HashMap<>();
+        body.put("name", name);
+        body.put("password", password);
+
         ApiError response = Allure.step("Пробуем создать аккаунт с невалидным паролем", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -229,7 +250,7 @@ public class SecurityApiTest extends TestBaseAPI {
                     .extract().body().as(CsrfResponse.class);
             return given()
                     .filter(filter)
-                    .body(new RegisterAccountBody(name, password))
+                    .body(body)
                     .contentType(ContentType.JSON)
                     .header(csrf.headerName(), csrf.token())
                     .when()
@@ -248,6 +269,10 @@ public class SecurityApiTest extends TestBaseAPI {
     @DisplayName("Попытка зарегистрировать аккаунт с null паролем")
     public void unSuccessfulRegisterAccountWithInvalidSizePassword(String password) {
         String name =  ApiUtility.genNick();
+        HashMap<String, String> body = new HashMap<>();
+        body.put("name", name);
+        body.put("password", password);
+
         ApiError response = Allure.step("Пробуем создать аккаунт с пустым паролем", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -260,7 +285,7 @@ public class SecurityApiTest extends TestBaseAPI {
                     .extract().body().as(CsrfResponse.class);
             return given()
                     .filter(filter)
-                    .body(new RegisterAccountBody(name, password))
+                    .body(body)
                     .contentType(ContentType.JSON)
                     .header(csrf.headerName(), csrf.token())
                     .when()
@@ -279,6 +304,10 @@ public class SecurityApiTest extends TestBaseAPI {
     @DisplayName("Попытка зарегистрировать аккаунт с пустым паролем")
     public void unSuccessfulRegisterAccountWithEmptyPassword(String password) {
         String name =  ApiUtility.genNick();
+        HashMap<String, String> body = new HashMap<>();
+        body.put("name", name);
+        body.put("password", password);
+
         Allure.step("Пробуем создать аккаунт с пустым паролем", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -291,7 +320,7 @@ public class SecurityApiTest extends TestBaseAPI {
                     .extract().body().as(CsrfResponse.class);
             return given()
                     .filter(filter)
-                    .body(new RegisterAccountBody(name, password))
+                    .body(body)
                     .contentType(ContentType.JSON)
                     .header(csrf.headerName(), csrf.token())
                     .when()
@@ -324,6 +353,10 @@ public class SecurityApiTest extends TestBaseAPI {
     @DisplayName("Регистрация аккаунтов с паролем в рамках границы")
     public void successfulRegisterWithValidPassword(String password) {
         String name =  ApiUtility.genNick();
+        HashMap<String, String> body = new HashMap<>();
+        body.put("name", name);
+        body.put("password", password);
+
         RegisterAccountResponse response = Allure.step("Пробуем создать аккаунт с валидной границей паролей", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
@@ -336,7 +369,7 @@ public class SecurityApiTest extends TestBaseAPI {
                     .extract().body().as(CsrfResponse.class);
             return given()
                     .filter(filter)
-                    .body(new RegisterAccountBody(name, password))
+                    .body(body)
                     .contentType(ContentType.JSON)
                     .header(csrf.headerName(), csrf.token())
                     .when()
@@ -379,9 +412,13 @@ public class SecurityApiTest extends TestBaseAPI {
                     .body("name", equalTo(name));
         });
 
+        HashMap<String, String> body = new HashMap<>();
+        body.put("name", newName);
+        body.put("password", password);
+
         Allure.step("Пробуем в той же сессии создать новый аккаунт", () -> given()
                 .filter(util.sessionFilter())
-                .body(new RegisterAccountBody(newName, password))
+                .body(body)
                 .header(util.csrf().headerName(), util.csrf().token())
                 .contentType(ContentType.JSON)
                 .when()
