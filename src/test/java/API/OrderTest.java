@@ -645,4 +645,75 @@ public class OrderTest extends TestBaseAPI {
 
         Allure.step("Проверяем что покупателю вернулась стоимость заказа", () -> Assert.assertEquals(0, newBuyerAccountInfo.balance().subtract(buyerAccountInfo.balance()).compareTo(createdOrder.price())));
     }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Покупатель не может отменить заказ. Продавец не может подтвердить заказ")
+    public void unsuccessfulChangeOrderStatusByWrongRole() {
+        String sellerName = ApiUtility.genNick();
+        String sellerPassword = ApiUtility.genPass();
+        UtilityRegister sellerUtil =  ApiUtility.registerAndReturnData(URL, sellerName, sellerPassword);
+
+        AuthorizedSession majorSes = ApiUtility.authMajor(URL);
+
+        CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
+
+        AdviceDTO createdAdvice =  Allure.step("Продавец создаёт объявление", () -> {
+            HashMap<String, Object> createBody = new HashMap<>();
+            createBody.put("name", ApiUtility.genNick());
+            createBody.put("game_id", createdCategory.id());
+            createBody.put("price", BigDecimal.valueOf(199));
+            return given()
+                    .header(sellerUtil.csrf().headerName(), sellerUtil.csrf().token())
+                    .filter(sellerUtil.sessionFilter())
+                    .auth().preemptive().basic(sellerName, sellerPassword)
+                    .contentType(ContentType.JSON)
+                    .body(createBody)
+                    .when()
+                    .post(URL+"/api/advices")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(AdviceDTO.class);
+        });
+
+        OrderDTO createdOrder = Allure.step("Покупатель покупает товар", () -> {
+            Map<String, Long> body =  new HashMap<>();
+            body.put("id", createdAdvice.id());
+            return given()
+                    .filter(majorSes.sessionFilter())
+                    .header(majorSes.csrf().headerName(), majorSes.csrf().token())
+                    .body(body)
+                    .contentType(ContentType.JSON)
+                    .when()
+                    .post(URL+"/api/orders/")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(OrderDTO.class);
+        });
+
+        Allure.step("Покупатель не может отменить заказ", () -> {
+            given()
+                    .header(majorSes.csrf().headerName(), majorSes.csrf().token())
+                    .filter(majorSes.sessionFilter())
+                    .when()
+                    .patch(URL+"/api/orders/"+createdOrder.id()+"/cancel")
+                    .then()
+                    .log().all()
+                    .statusCode(403);
+        });
+
+        Allure.step("Продавец не может подтвердить заказ", () -> {
+            given()
+                    .header(sellerUtil.csrf().headerName(), sellerUtil.csrf().token())
+                    .filter(sellerUtil.sessionFilter())
+                    .auth().preemptive().basic(sellerName, sellerPassword)
+                    .when()
+                    .patch(URL+"/api/orders/"+createdOrder.id()+"/confirm")
+                    .then()
+                    .log().all()
+                    .statusCode(403);
+        });
+    }
 }
