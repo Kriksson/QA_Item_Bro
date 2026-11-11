@@ -82,7 +82,22 @@ public class FeedbackTest extends TestBaseAPI {
                     .statusCode(204);
         });
 
-        Allure.step("Проверяем заказ, он должен содержать оставленный отзыв", () -> {
+        Allure.step("Продавец оставляет ответ на отзыв", () -> {
+            Map<String, Object> body =  new HashMap<>();
+            body.put("responseText", "Спасибо за отзыв!");
+            given()
+                    .filter(sellerUtil.sessionFilter())
+                    .header(sellerUtil.csrf().headerName(), sellerUtil.csrf().token())
+                    .contentType(ContentType.JSON)
+                    .body(body)
+                    .when()
+                    .patch(URL+"/api/orders/"+createdOrder.id()+"/response")
+                    .then()
+                    .log().all()
+                    .statusCode(204);
+        });
+
+        Allure.step("Проверяем заказ, он должен содержать оставленный отзыв и ответ продавца", () -> {
             OrderDTO order = given()
                     .filter(majorSes.sessionFilter())
                     .when()
@@ -94,6 +109,7 @@ public class FeedbackTest extends TestBaseAPI {
 
             Assert.assertEquals("Отличная работа!", order.feedbackText());
             Assert.assertEquals(Integer.valueOf(5), order.rating());
+            Assert.assertEquals("Спасибо за отзыв!", order.sellerResponseText());
         });
 
         Allure.step("Покупатель изменяет отзыв", () -> {
@@ -177,4 +193,103 @@ public class FeedbackTest extends TestBaseAPI {
                     .statusCode(400);
         });
     }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Покупатель не может оставить ответ на отзыв, продавец не может написать отзыв")
+    public void unsuccessfulAddFeedbackAndResponseByWrongRole() {
+        String sellerName = ApiUtility.genNick();
+        String sellerPassword = ApiUtility.genPass();
+        UtilityRegister sellerUtil =  ApiUtility.registerAndReturnData(URL, sellerName, sellerPassword);
+
+        AuthorizedSession majorSes = ApiUtility.authMajor(URL);
+
+        CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
+
+        AdviceDTO createdAdvice =  Allure.step("Продавец создаёт объявление", () -> {
+            HashMap<String, Object> createBody = new HashMap<>();
+            createBody.put("name", ApiUtility.genNick());
+            createBody.put("game_id", createdCategory.id());
+            createBody.put("price", BigDecimal.valueOf(199));
+            return given()
+                    .header(sellerUtil.csrf().headerName(), sellerUtil.csrf().token())
+                    .filter(sellerUtil.sessionFilter())
+                    .auth().preemptive().basic(sellerName, sellerPassword)
+                    .contentType(ContentType.JSON)
+                    .body(createBody)
+                    .when()
+                    .post(URL+"/api/advices")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(AdviceDTO.class);
+        });
+
+        OrderDTO createdOrder = Allure.step("Покупатель покупает товар", () -> {
+            Map<String, Long> body =  new HashMap<>();
+            body.put("id", createdAdvice.id());
+            return given()
+                    .filter(majorSes.sessionFilter())
+                    .header(majorSes.csrf().headerName(), majorSes.csrf().token())
+                    .body(body)
+                    .contentType(ContentType.JSON)
+                    .when()
+                    .post(URL+"/api/orders/")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(OrderDTO.class);
+        });
+
+        Allure.step("Продавец не может оставить отзыв", () -> {
+            Map<String, Object> body =  new HashMap<>();
+            body.put("rating", 5);
+            body.put("feedbackText", "Отличная работа!");
+            given()
+                    .auth().preemptive().basic(sellerName, sellerPassword)
+                    .filter(sellerUtil.sessionFilter())
+                    .header(sellerUtil.csrf().headerName(), sellerUtil.csrf().token())
+                    .contentType(ContentType.JSON)
+                    .body(body)
+                    .when()
+                    .patch(URL+"/api/orders/"+createdOrder.id()+"/feedback")
+                    .then()
+                    .log().all()
+                    .statusCode(403)
+                    .body("message", equalTo("У вас нет прав!"));
+        });
+
+        Allure.step("Покупатель оставляет отзыв", () -> {
+            Map<String, Object> body =  new HashMap<>();
+            body.put("rating", 5);
+            body.put("feedbackText", "Отличная работа!");
+            given()
+                    .filter(majorSes.sessionFilter())
+                    .header(majorSes.csrf().headerName(), majorSes.csrf().token())
+                    .contentType(ContentType.JSON)
+                    .body(body)
+                    .when()
+                    .patch(URL+"/api/orders/"+createdOrder.id()+"/feedback")
+                    .then()
+                    .log().all()
+                    .statusCode(204);
+        });
+
+        Allure.step("Покупатель не может оставить ответ на отзыв", () -> {
+            Map<String, Object> body =  new HashMap<>();
+            body.put("responseText", "Спасибо за отзыв!");
+            given()
+                    .filter(majorSes.sessionFilter())
+                    .header(majorSes.csrf().headerName(), majorSes.csrf().token())
+                    .contentType(ContentType.JSON)
+                    .body(body)
+                    .when()
+                    .patch(URL+"/api/orders/"+createdOrder.id()+"/response")
+                    .then()
+                    .log().all()
+                    .statusCode(403)
+                    .body("message", equalTo("У вас нет прав!"));
+        });
+    }
+
 }
