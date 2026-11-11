@@ -213,4 +213,110 @@ public class OrderTest extends TestBaseAPI {
                     .statusCode(403);
         });
     }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Заказ могут прочитать только 3 пользователя, покупатель, продавец, администратор")
+    public void successfulReadOrderByRoles() {
+        String sellerName = ApiUtility.genNick();
+        String sellerPassword = ApiUtility.genPass();
+        UtilityRegister sellerUtil = ApiUtility.registerAndReturnData(URL, sellerName, sellerPassword);
+
+        String guestName =  ApiUtility.genNick();
+        String guestPassword = ApiUtility.genPass();
+        UtilityRegister guestUtil = ApiUtility.registerAndReturnData(URL, guestName, guestPassword);
+
+        AuthorizedSession adminSes = ApiUtility.authAdmin(URL);
+        SessionFilter adminFilter = adminSes.sessionFilter();
+
+        AuthorizedSession majorSes = ApiUtility.authMajor(URL);
+        SessionFilter majorFilter = majorSes.sessionFilter();
+        CsrfResponse majorCsrf =  majorSes.csrf();
+
+        CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
+
+        AdviceDTO createdAdvice =  Allure.step("Продавец создаёт объявление", () -> {
+            CreateAdviceBody createBody = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 199L);
+            return given()
+                    .header(sellerUtil.csrf().headerName(), sellerUtil.csrf().token())
+                    .filter(sellerUtil.sessionFilter())
+                    .auth().preemptive().basic(sellerName, sellerPassword)
+                    .contentType(ContentType.JSON)
+                    .body(createBody)
+                    .when()
+                    .post(URL+"/api/advices")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(AdviceDTO.class);
+        });
+
+        OrderDTO createdOrder = Allure.step("Покупатель покупает товар", () -> {
+            Map<String, Long> body =  new HashMap<>();
+            body.put("id", createdAdvice.id());
+
+            return given()
+                    .filter(majorFilter)
+                    .header(majorCsrf.headerName(), majorCsrf.token())
+                    .body(body)
+                    .contentType(ContentType.JSON)
+                    .when()
+                    .post(URL+"/api/orders/")
+                    .then()
+                    .log().all()
+                    .statusCode(201)
+                    .extract().body().as(OrderDTO.class);
+        });
+
+        Allure.step("Продавец запрашивает информацию о заказе и проверяем что заказ тот же", () -> {
+            OrderDTO order = given()
+                    .filter(sellerUtil.sessionFilter())
+                    .when()
+                    .get(URL+"/api/orders/"+createdOrder.id())
+                    .then()
+                    .log().all()
+                    .statusCode(200)
+                    .extract().body().as(OrderDTO.class);
+
+            Assert.assertEquals(createdOrder.id(), order.id());
+        });
+
+        Allure.step("Покупатель запрашивает информацию о заказе и проверяем что заказ тот же", () -> {
+            OrderDTO order = given()
+                    .filter(majorFilter)
+                    .when()
+                    .get(URL+"/api/orders/"+createdOrder.id())
+                    .then()
+                    .log().all()
+                    .statusCode(200)
+                    .extract().body().as(OrderDTO.class);
+
+            Assert.assertEquals(createdOrder.id(), order.id());
+        });
+
+        Allure.step("Администратор запрашивает информацию о заказе и проверяем что заказ тот же", () -> {
+            OrderDTO order = given()
+                    .filter(adminFilter)
+                    .when()
+                    .get(URL+"/api/orders/"+createdOrder.id())
+                    .then()
+                    .log().all()
+                    .statusCode(200)
+                    .extract().body().as(OrderDTO.class);
+
+            Assert.assertEquals(createdOrder.id(), order.id());
+        });
+
+        Allure.step("Гость запрашивает информацию о заказе и получает 403 с ошибкой \"У вас нет прав\"", () -> {
+            given()
+                    .filter(guestUtil.sessionFilter())
+                    .auth().preemptive().basic(guestName, guestPassword)
+                    .when()
+                    .get(URL+"/api/orders/"+createdOrder.id())
+                    .then()
+                    .log().all()
+                    .statusCode(403)
+                    .body("message", equalTo("У вас нет прав"));
+        });
+    }
 }
