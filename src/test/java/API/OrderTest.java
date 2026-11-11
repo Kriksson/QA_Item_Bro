@@ -1,0 +1,142 @@
+package API;
+
+import API.Records.*;
+import io.qameta.allure.Allure;
+import io.qameta.allure.Owner;
+import io.restassured.filter.session.SessionFilter;
+import io.restassured.http.ContentType;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.junit.Assert;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.equalTo;
+
+public class OrderTest extends TestBaseAPI {
+
+    public static final String URL = "http://localhost:8085";
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("Покупка активного объявления")
+    public void successfulBuyActiveAdvice() {
+        String name = ApiUtility.genNick();
+        String password = ApiUtility.genPass();
+        UtilityRegister util = ApiUtility.registerAndReturnData(URL, name, password);
+
+        CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
+
+        CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 199L);
+        AdviceDTO createdAdvice = Allure.step("Создание тестового объявления", () -> given()
+                .header(util.csrf().headerName(), util.csrf().token())
+                .filter(util.sessionFilter())
+                .contentType(ContentType.JSON)
+                .auth().preemptive().basic(name, password)
+                .body(body)
+                .when()
+                .post(URL+"/api/advices")
+                .then()
+                .log().all()
+                .statusCode(201)
+                .extract().body().as(AdviceDTO.class));
+
+        AuthorizedSession major = ApiUtility.authMajor(URL);
+        CsrfResponse csrfMajor = major.csrf();
+        SessionFilter sessionMajor = major.sessionFilter();
+
+        RegisterAccountResponse majorAccount = Allure.step("Запрашиваем статистику аккаунта с балансом", () -> given()
+                .filter(sessionMajor)
+                .when()
+                .get(URL+"/api/user/me")
+                .then()
+                .log().all()
+                .statusCode(200)
+                .extract().body().as(RegisterAccountResponse.class));
+
+        Map<String, Long> createOrderBody = new HashMap<>();
+        createOrderBody.put("id", createdAdvice.id());
+
+        OrderDTO createdOrder = Allure.step("Создаём заказ по объявлению", () -> given()
+                .filter(sessionMajor)
+                .header(csrfMajor.headerName(), csrfMajor.token())
+                .contentType(ContentType.JSON)
+                .body(createOrderBody)
+                .when()
+                .post(URL+"/api/orders/")
+                .then()
+                .log().all()
+                .statusCode(201)
+                .extract().body().as(OrderDTO.class));
+
+        Allure.step("Проверяем данные созданного заказа", () -> {
+            Assert.assertEquals("OPENED", createdOrder.orderStatus());
+            Assert.assertTrue(EqualsBuilder.reflectionEquals(createdOrder.adviceDTO(), createdAdvice));
+            Assert.assertEquals(Long.valueOf(199), createdOrder.price());
+        });
+
+        Allure.step("Проверяем баланс покупателя, должно списаться 199", () -> {
+            RegisterAccountResponse response = given()
+                    .filter(sessionMajor)
+                    .when()
+                    .get(URL+"/api/user/me")
+                    .then()
+                    .log().all()
+                    .statusCode(200)
+                    .extract().body().as(RegisterAccountResponse.class);
+
+            BigDecimal expectedBalance = majorAccount.balance().subtract(createdAdvice.price());
+
+            Assert.assertEquals(0, expectedBalance.compareTo(response.balance()));
+        });
+    }
+
+    @Test
+    @Owner("kriksson")
+    @DisplayName("При недостаточном балансе заказ не создаётся")
+    public void unsuccessfulBuyActiveAdvice() {
+        String sellerName = ApiUtility.genNick();
+        String sellerPassword = ApiUtility.genPass();
+        UtilityRegister sellerUtil = ApiUtility.registerAndReturnData(URL, sellerName, sellerPassword);
+        CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, ApiUtility.genNick());
+
+        CreateAdviceBody body = new CreateAdviceBody(ApiUtility.genNick(), createdCategory.id(), 199L);
+        AdviceDTO createdAdvice = Allure.step("Создание тестового объявления", () -> given()
+                .header(sellerUtil.csrf().headerName(), sellerUtil.csrf().token())
+                .filter(sellerUtil.sessionFilter())
+                .contentType(ContentType.JSON)
+                .auth().preemptive().basic(sellerName, sellerPassword)
+                .body(body)
+                .when()
+                .post(URL+"/api/advices")
+                .then()
+                .log().all()
+                .statusCode(201)
+                .extract().body().as(AdviceDTO.class));
+
+        String buyerName = ApiUtility.genNick();
+        String buyerPassword = ApiUtility.genPass();
+        UtilityRegister buyerUtil = ApiUtility.registerAndReturnData(URL, buyerName, buyerPassword);
+        Map<String, Long> createOrderBody = new HashMap<>();
+        createOrderBody.put("id", createdAdvice.id());
+
+        Allure.step("Пытаемся купить товар без средств и ожидаем 409 с ошибкой \"Недостаточно средств\"", () -> {
+            given()
+                    .filter(buyerUtil.sessionFilter())
+                    .header(buyerUtil.csrf().headerName(), buyerUtil.csrf().token())
+                    .auth().preemptive().basic(buyerName, buyerPassword)
+                    .contentType(ContentType.JSON)
+                    .body(createOrderBody)
+                    .when()
+                    .post(URL+"/api/orders/")
+                    .then()
+                    .log().all()
+                    .statusCode(409)
+                    .body("message", equalTo("Недостаточно средств"));
+        });
+    }
+}

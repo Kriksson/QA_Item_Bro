@@ -56,6 +56,32 @@ public class ApiUtility {
                 .extract().body().as(CategoryDTO.class));
     }
 
+    public static AuthorizedSession authMajor(String URL) {
+        SessionFilter filter = new SessionFilter();
+
+        Allure.step("Акккаунт с балансом авторизуется", () -> {
+            given()
+                    .filter(filter)
+                    .auth().preemptive().basic("MAJOR", "Major123!")
+                    .when()
+                    .get(URL+"/api/user/me")
+                    .then()
+                    .log().all()
+                    .statusCode(200);
+        });
+
+        CsrfResponse csrf = Allure.step("Получаем CSRF сессию аккаунта с балансом", () -> given()
+                .filter(filter)
+                .when()
+                .get(URL+"/csrf")
+                .then()
+                .log().all()
+                .statusCode(200)
+                .extract().body().as(CsrfResponse.class));
+
+        return new AuthorizedSession(filter, csrf);
+    }
+
     public static AuthorizedSession authAdmin(String URL) {
         SessionFilter filter = new SessionFilter();
 

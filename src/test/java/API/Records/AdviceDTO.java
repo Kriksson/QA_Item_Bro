@@ -1,4 +1,6 @@
 package API.Records;
 
-public record AdviceDTO(Long id, String name, GameDTO game, UserDTO userSeller, Long price, String imageUrl) {
+import java.math.BigDecimal;
+
+public record AdviceDTO(Long id, String name, GameDTO game, UserDTO userSeller, BigDecimal price, String imageUrl) {
 }
