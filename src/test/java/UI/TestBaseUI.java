@@ -1,5 +1,6 @@
 package UI;
 
+import config.TestConfig;
 import API.ApiUtility;
 import com.codeborne.selenide.Configuration;
 import com.codeborne.selenide.Selenide;
@@ -18,13 +19,15 @@ public abstract class TestBaseUI {
 
     @BeforeEach
     void setUp() throws SQLException {
+        Configuration.remote = TestConfig.REMOTE.isBlank() ? null : TestConfig.REMOTE;
+        Configuration.browserVersion = TestConfig.BROWSER_VERSION;
         if (Configuration.remote == null) {
             WebDriverManager.chromedriver().setup();
         }
 
         Configuration.browser = "chrome";
         Configuration.browserSize = "1024x768";
-        Configuration.headless = false;
+        Configuration.headless = TestConfig.HEADLESS;
         SelenideLogger.addListener("allure",  new AllureSelenide()
                 .includeSelenideSteps(true)
                 .savePageSource(true)
@@ -34,18 +37,18 @@ public abstract class TestBaseUI {
 
     void prepareDb() throws SQLException {
         try (Connection connection = DriverManager.getConnection(
-                "jdbc:postgresql://localhost:5433/item_bro",
-                "kriksson",
-                "kriksson"
+                TestConfig.DB_URL,
+                TestConfig.DB_USER,
+                TestConfig.DB_PASSWORD
         );
              Statement statement = connection.createStatement()) {
             statement.execute("TRUNCATE TABLE order_messages, orders, advices, games, users RESTART IDENTITY");
             ApiUtility.registerAndReturnData(
-                    "http://localhost:8085", "ADMIN", "Admin123!"
+                    TestConfig.API_URL, "ADMIN", "Admin123!"
             );
 
             ApiUtility.registerAndReturnData(
-                    "http://localhost:8085", "MAJOR", "Major123!"
+                    TestConfig.API_URL, "MAJOR", "Major123!"
             );
             statement.execute("UPDATE users SET role = 'ADMIN' WHERE username = 'ADMIN'");
             statement.execute("UPDATE users SET balance = '100000' WHERE username = 'MAJOR'");

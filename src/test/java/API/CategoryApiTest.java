@@ -1,5 +1,6 @@
 package API;
 
+import config.TestConfig;
 import API.Records.*;
 import java.util.HashMap;
 import io.qameta.allure.Allure;
@@ -20,7 +21,7 @@ import static org.hamcrest.Matchers.equalTo;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class CategoryApiTest extends TestBaseAPI{
 
-    public static final String URL = "http://localhost:8085";
+    public static final String URL = TestConfig.API_URL;
 
     @Test
     @Owner("kriksson")

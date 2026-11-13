@@ -1,5 +1,6 @@
 package UI;
 
+import config.TestConfig;
 import API.ApiUtility;
 import UI.Pages.MainPage;
 import com.codeborne.selenide.Selenide;
@@ -11,7 +12,7 @@ import org.junit.jupiter.api.Test;
 
 public class AuthTest extends TestBaseUI{
 
-    public static final String URL = "http://localhost:5173/";
+    public static final String URL = TestConfig.UI_URL;
 
     @Test
     @Owner("kriksson")

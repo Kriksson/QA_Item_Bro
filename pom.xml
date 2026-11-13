@@ -10,6 +10,7 @@
 
     <properties>
         <maven.compiler.release>27</maven.compiler.release>
+        <test.threads>1</test.threads>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <selenide.version>7.19.1</selenide.version>
         <webdrivermanager.version>6.4.0</webdrivermanager.version>
@@ -115,6 +116,14 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.6.1</version>
+                <configuration>
+                    <forkCount>${test.threads}</forkCount>
+                    <reuseForks>true</reuseForks>
+                    <argLine>-Dtest.worker=${surefire.forkNumber}</argLine>
+                    <systemPropertyVariables>
+                        <test.threads>${test.threads}</test.threads>
+                    </systemPropertyVariables>
+                </configuration>
             </plugin>
         </plugins>
     </build>

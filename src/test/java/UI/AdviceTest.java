@@ -1,5 +1,6 @@
 package UI;
 
+import config.TestConfig;
 import API.ApiUtility;
 import API.Records.CategoryDTO;
 import UI.Data.Advice;
@@ -14,13 +15,13 @@ import org.junit.jupiter.api.Test;
 
 public class AdviceTest extends TestBaseUI {
 
-    public static final String URL = "http://localhost:5173";
+    public static final String URL = TestConfig.UI_URL;
 
     @Test
     @Owner("kriksson")
     @DisplayName("Пользователь создаёт объявление с правильными названием, категорией и ценой")
     public void successfulCreateAdvice() {
-        CategoryDTO categoryDTO = ApiUtility.createTestCategory("http://localhost:8085", ApiUtility.genNick());
+        CategoryDTO categoryDTO = ApiUtility.createTestCategory(TestConfig.API_URL, ApiUtility.genNick());
         String adviceName = ApiUtility.genNick();
 
         MainPage mainPage = new MainPage(URL);
@@ -44,7 +45,7 @@ public class AdviceTest extends TestBaseUI {
     @Owner("kriksson")
     @DisplayName("Пользователь архивирует своё объявление")
     public void successfulArchiveOwnAdvice() {
-        CategoryDTO categoryDTO = ApiUtility.createTestCategory("http://localhost:8085", ApiUtility.genNick());
+        CategoryDTO categoryDTO = ApiUtility.createTestCategory(TestConfig.API_URL, ApiUtility.genNick());
         String adviceName = ApiUtility.genNick();
 
         MainPage mainPage = new MainPage(URL);
@@ -60,7 +61,7 @@ public class AdviceTest extends TestBaseUI {
     @Owner("kriksson")
     @DisplayName("Ошибки в форме объявления блокируют публикацию")
     public void unsuccessfulCreateAdviceWithInvalidData() {
-        CategoryDTO categoryDTO = ApiUtility.createTestCategory("http://localhost:8085", ApiUtility.genNick());
+        CategoryDTO categoryDTO = ApiUtility.createTestCategory(TestConfig.API_URL, ApiUtility.genNick());
 
         MainPage mainPage = new MainPage(URL);
         mainPage.authUser("MAJOR", "Major123!");

@@ -1,5 +1,6 @@
 package UI;
 
+import config.TestConfig;
 import API.ApiUtility;
 import UI.Pages.AdminControlPage;
 import UI.Pages.MainPage;
@@ -10,7 +11,7 @@ import org.junit.jupiter.api.Test;
 
 public class AdminTest extends TestBaseUI {
 
-    public static final String URL = "http://localhost:5173";
+    public static final String URL = TestConfig.UI_URL;
 
     @Test
     @Owner("kriksson")

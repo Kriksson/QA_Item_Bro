@@ -1,5 +1,6 @@
 package API;
 
+import config.TestConfig;
 import API.Records.*;
 import io.qameta.allure.Allure;
 import io.qameta.allure.Owner;
@@ -17,7 +18,7 @@ import static io.restassured.RestAssured.given;
 
 public class AdminTest extends TestBaseAPI{
 
-    public static final String URL = "http://localhost:8085";
+    public static final String URL = TestConfig.API_URL;
 
     @Test
     @Owner("kriksson")
