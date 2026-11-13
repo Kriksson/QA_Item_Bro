@@ -1,0 +1,42 @@
+
+services:
+  jenkins:
+    build: .
+    ports:
+      - "8080:8080"
+    networks:
+      - default
+      - item-bro
+    group_add:
+      - "964"
+    volumes:
+      - jenkins-home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  selenoid:
+    image: aerokube/selenoid:1.11.3
+    environment:
+      DOCKER_API_VERSION: "1.45"
+    ports:
+      - "4444:4444"
+    networks:
+      - default
+      - item-bro
+    volumes:
+      - ./selenoid:/etc/selenoid:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command:
+      - "-conf"
+      - "/etc/selenoid/browsers.json"
+      - "-container-network"
+      - "${ITEM_BRO_NETWORK:-item-bro_default}"
+      - "-limit"
+      - "${SELENOID_LIMIT:-4}"
+
+volumes:
+  jenkins-home:
+
+networks:
+  item-bro:
+    external: true
+    name: ${ITEM_BRO_NETWORK:-item-bro_default}
