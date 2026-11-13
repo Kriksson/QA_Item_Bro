@@ -18,9 +18,28 @@ public class AdvicesPage {
     SelenideElement searchInput = $x("//input[@aria-label='Поиск предмета на странице']");
 
     SelenideElement confirmArchive = $x("//button[text()='Архивировать']");
+    public SelenideElement createOrderButton = $x("//dialog//button[contains(., 'Создать заказ')]");
+    public SelenideElement loginForBuyButton = $x("//dialog//button[contains(., 'Войти для покупки')]");
+    public SelenideElement ownAdviceButton = $x("//dialog//button[contains(., 'Твоё объявление')]");
 
 
     public AdvicesPage() {}
+
+    public void openAdvice(String adviceName) {
+        Allure.step("Открываем объявление " + adviceName, () -> {
+            searchInput.scrollIntoCenter().setValue(adviceName);
+            advicesList.findBy(Condition.text(adviceName)).shouldBe(Condition.visible)
+                    .$x(".//button[@class='listing-open-title']").scrollIntoCenter().click();
+        });
+    }
+
+    public OrderPage buyAdvice() {
+        return Allure.step("Покупаем объявление", () -> {
+            createOrderButton.shouldBe(Condition.visible).shouldBe(Condition.enabled).scrollIntoCenter().click();
+            $x("//section[@class='order-workspace']").shouldBe(Condition.visible);
+            return new OrderPage();
+        });
+    }
 
     public boolean adviceContain(String adviceName) {
         return Allure.step("Ищем объявление в поиске", () -> {
