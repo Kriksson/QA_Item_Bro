@@ -6,6 +6,7 @@ import com.codeborne.selenide.SelenideElement;
 import io.qameta.allure.Allure;
 
 import java.time.Duration;
+import java.math.BigDecimal;
 
 import static com.codeborne.selenide.Selenide.$x;
 
@@ -25,6 +26,7 @@ public class MainPage {
     SelenideElement authUsernameText = $x("//span[contains(@class, 'username')]");
     SelenideElement logOutButton = $x("//button[text()='Выйти']");
     SelenideElement formErrorText = $x("//p[@class='form-error']");
+    public SelenideElement balanceText = $x("//div[@class='balance']");
 
     SelenideElement adminSectionButton = $x("//button[text()='Управление']");
 
@@ -74,6 +76,41 @@ public class MainPage {
     public String getFormError() {
         formErrorText.shouldBe(Condition.visible);
         return formErrorText.getText();
+    }
+
+    public BigDecimal getBalance() {
+        return new BigDecimal(balanceText.shouldBe(Condition.visible).getText()
+                .replaceAll("[\\s\\u00a0\\u202f₽]", "").replace(",", "."));
+    }
+
+    public OrdersPage openOrdersPage() {
+        return Allure.step("Открываем список заказов", () -> {
+            $x("//nav//button[contains(., 'Мои заказы')]").scrollIntoCenter().click();
+            return new OrdersPage();
+        });
+    }
+
+    public AdvicesPage openCategory(String categoryName) {
+        return Allure.step("Открываем категорию " + categoryName, () -> {
+            $x("//button[@aria-label='Открыть категорию " + categoryName + "']")
+                    .shouldBe(Condition.visible).scrollIntoCenter().click();
+            return new AdvicesPage();
+        });
+    }
+
+    public ProfileSettingsPage openProfileSettingsPage() {
+        return Allure.step("Открываем настройки профиля", () -> {
+            authUsernameText.scrollIntoCenter().click();
+            $x("//a[@href='/profile/edit']").shouldBe(Condition.visible).click();
+            return new ProfileSettingsPage();
+        });
+    }
+
+    public ProfilePage openProfilePage() {
+        return Allure.step("Открываем свой публичный профиль", () -> {
+            $x("//nav//button[contains(., 'Мой профиль')]").scrollIntoCenter().click();
+            return new ProfilePage();
+        });
     }
 
     public boolean isAdminFunctionVisible() {
