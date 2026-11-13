@@ -8,17 +8,18 @@ pipeline {
     }
 
     parameters {
-        choice(name: 'THREADS', choices: ['1', '2', '3', '4'], description: 'Количество параллельных процессов. У каждого свой стенд и база.')
-        string(name: 'APP_IMAGE', defaultValue: 'item-bro-app:latest', description: 'Образ бэкенда в Docker на машине Jenkins')
-        string(name: 'FRONTEND_IMAGE', defaultValue: 'item-bro-ui-frontend:latest', description: 'Образ фронта в Docker на машине Jenkins')
-        string(name: 'DB_USER', defaultValue: 'kriksson', description: 'Пользователь временных тестовых баз')
-        password(name: 'DB_PASSWORD', defaultValue: 'kriksson', description: 'Пароль временных тестовых баз')
-        string(name: 'SELENIDE_REMOTE', defaultValue: 'http://selenoid:4444/wd/hub', description: 'Удалённый WebDriver')
+        choice(name: 'TEST_SUITE', choices: ['ALL', 'API', 'UI'], description: 'Какие тесты запустить')
+        choice(name: 'THREADS', choices: ['1', '2', '3', '4'], description: 'Количество параллельных процессов.')
     }
 
     environment {
         JAVA_HOME = '/opt/jdk-27'
         PATH = "${JAVA_HOME}/bin:${env.PATH}"
+        APP_IMAGE = 'item-bro-app:latest'
+        FRONTEND_IMAGE = 'item-bro-ui-frontend:latest'
+        DB_USER = 'kriksson'
+        DB_PASSWORD = 'kriksson'
+        SELENIDE_REMOTE = 'http://selenoid:4444/wd/hub'
         SELENIDE_HEADLESS = 'true'
         SELENIDE_BROWSER_VERSION = '128.0'
         ITEM_BRO_NETWORK = 'item-bro_default'
@@ -69,7 +70,21 @@ pipeline {
 
         stage('Запустить автотесты') {
             steps {
-                sh './mvnw -B -Dtest.threads="$THREADS" test'
+                sh '''
+                    set -eu
+                    case "$TEST_SUITE" in
+                        ALL)
+                            ./mvnw -B -Dtest.threads="$THREADS" test
+                            ;;
+                        API|UI)
+                            ./mvnw -B -Dtest.threads="$THREADS" "-Dtest=$TEST_SUITE.*Test" test
+                            ;;
+                        *)
+                            echo 'TEST_SUITE должен быть ALL, API или UI' >&2
+                            exit 2
+                            ;;
+                    esac
+                '''
             }
         }
     }
