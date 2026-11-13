@@ -28,6 +28,12 @@ public class MainPage {
 
     SelenideElement adminSectionButton = $x("//button[text()='Управление']");
 
+    public SelenideElement createAdviceButton = $x("//button[text()='Разместить объявление']");
+    public SelenideElement selectCategoryForAdviceSelect = $x("//select[@name='game']");
+    public SelenideElement adviceNameInput = $x("//input[@placeholder='Что ты продаёшь?']");
+    public SelenideElement advicePriceInput = $x("//input[@placeholder='0']");
+    public SelenideElement adviceCreateSubmitButton = $x("//button[text()='Опубликовать объявление ']");
+
     public MainPage(String URL) {
         Allure.step("Переходим на основную страницу", () -> Selenide.open(URL));
     }
@@ -74,4 +80,42 @@ public class MainPage {
         return adminSectionButton.is(Condition.visible, Duration.ofSeconds(4));
     }
 
+    public AdminControlPage openAdminControlPage() {
+        return Allure.step("Открываем панель управления", () -> {
+            adminSectionButton.click();
+            return new AdminControlPage();
+        });
+    }
+
+    public AdvicesPage createAdvice(String category, String name, String price) {
+        return Allure.step("Создаём объявление в " +category + ", " + name + ", с ценой " + price, () -> {
+            createAdviceButton.click();
+            selectCategoryForAdviceSelect.shouldBe(Condition.visible);
+            selectCategoryForAdviceSelect.selectOptionContainingText(category);
+            adviceNameInput.setValue(name);
+            advicePriceInput.setValue(price);
+            adviceCreateSubmitButton.click();
+            return new AdvicesPage();
+        });
+    }
+
+    public boolean hasAdviceCategorySelectorError() {
+        return selectCategoryForAdviceSelect.is(
+                Condition.not(
+                        Condition.domProperty("validationMessage", "")
+                )
+        );
+    }
+
+    public boolean hasAdviceNameError() {
+        return adviceNameInput.is(Condition.not(
+                Condition.domProperty("validationMessage", "")
+        ));
+    }
+
+    public boolean hasAdvicePriceError() {
+        return advicePriceInput.is(Condition.not(
+                Condition.domProperty("validationMessage", "")
+        ));
+    }
 }
