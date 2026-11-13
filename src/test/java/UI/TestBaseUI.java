@@ -9,6 +9,7 @@ import io.github.bonigarcia.wdm.WebDriverManager;
 import io.qameta.allure.selenide.AllureSelenide;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.openqa.selenium.chrome.ChromeOptions;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -28,6 +29,8 @@ public abstract class TestBaseUI {
         Configuration.browser = "chrome";
         Configuration.browserSize = "1024x768";
         Configuration.headless = TestConfig.HEADLESS;
+        Configuration.browserCapabilities = new ChromeOptions()
+                .addArguments("--unsafely-treat-insecure-origin-as-secure=" + TestConfig.UI_URL);
         SelenideLogger.addListener("allure",  new AllureSelenide()
                 .includeSelenideSteps(true)
                 .savePageSource(true)
