@@ -176,7 +176,7 @@ public class AdminTest extends TestBaseAPI{
                     .statusCode(204);
         });
 
-        Allure.step("Проверяем что после переоткрытия у продавца снялся баланс", () -> {
+        Allure.step("Проверяем что после повторного открытия заказа баланс продавца равен нулю", () -> {
             RegisterAccountResponse response = given()
                     .filter(sellerUtil.sessionFilter())
                     .auth().preemptive().basic(sellerName, sellerPassword)
@@ -187,7 +187,7 @@ public class AdminTest extends TestBaseAPI{
                     .statusCode(200)
                     .extract().body().as(RegisterAccountResponse.class);
 
-            Assert.assertEquals(-1, response.balance().compareTo(BigDecimal.valueOf(199)));
+            Assert.assertEquals(0, response.balance().compareTo(BigDecimal.ZERO));
         });
 
         Allure.step("Проверяем что у заказа статус OPENED", () -> {

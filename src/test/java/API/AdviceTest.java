@@ -636,7 +636,7 @@ public class AdviceTest extends TestBaseAPI{
                     .extract().body().as(AdviceDTO.class);
         });
 
-        List<AdviceDTO> adviceDTOList = Allure.step("Запрашиваем все объявления и проверяем что отслеживаемый среди них", () -> given()
+        List<AdviceDTO> adviceDTOList = Allure.step("Получаем объявления выбранной категории", () -> given()
                 .filter(util.sessionFilter())
                 .queryParam("gameId", createdCategory.id())
                 .when()
@@ -659,7 +659,7 @@ public class AdviceTest extends TestBaseAPI{
                     .statusCode(204);
         });
 
-        List<AdviceDTO> newAdviceDTOList = Allure.step("Запрашиваем все объявления и проверяем что отслеживаемого нет среди них", () -> given()
+        List<AdviceDTO> newAdviceDTOList = Allure.step("Повторно получаем объявления после архивирования", () -> given()
                 .filter(util.sessionFilter())
                 .queryParam("gameId", createdCategory.id())
                 .when()
@@ -669,7 +669,7 @@ public class AdviceTest extends TestBaseAPI{
                 .statusCode(200)
                 .extract().jsonPath().getList("content", AdviceDTO.class));
 
-        Allure.step("Проверяем что отслеживаемое объявление пропала из списка", () -> Assert.assertFalse(newAdviceDTOList.stream().anyMatch(x -> x.name().equals(dAdvice.name()))));
+        Allure.step("Проверяем что отслеживаемое объявление пропало из списка", () -> Assert.assertFalse(newAdviceDTOList.stream().anyMatch(x -> x.name().equals(dAdvice.name()))));
     }
 
     @Test

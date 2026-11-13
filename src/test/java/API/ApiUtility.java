@@ -67,7 +67,7 @@ public class ApiUtility {
     public static AuthorizedSession authMajor(String URL) {
         SessionFilter filter = new SessionFilter();
 
-        Allure.step("Акккаунт с балансом авторизуется", () -> {
+        Allure.step("Аккаунт с балансом авторизуется", () -> {
             given()
                     .filter(filter)
                     .auth().preemptive().basic("MAJOR", "Major123!")
@@ -78,7 +78,7 @@ public class ApiUtility {
                     .statusCode(200);
         });
 
-        CsrfResponse csrf = Allure.step("Получаем CSRF сессию аккаунта с балансом", () -> given()
+        CsrfResponse csrf = Allure.step("Получаем CSRF-токен для сессии аккаунта с балансом", () -> given()
                 .filter(filter)
                 .when()
                 .get(URL+"/csrf")

@@ -204,7 +204,7 @@ public class SecurityApiTest extends TestBaseAPI {
         body.put("name", name);
         body.put("password", password);
 
-        RegisterAccountResponse response = Allure.step("Пробуем создать ник с валидной границей аргументом", () -> {
+        RegisterAccountResponse response = Allure.step("Регистрируем аккаунт с именем допустимой длины", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
                     .filter(filter)
@@ -274,7 +274,7 @@ public class SecurityApiTest extends TestBaseAPI {
         body.put("name", name);
         body.put("password", password);
 
-        ApiError response = Allure.step("Пробуем создать аккаунт с пустым паролем", () -> {
+        ApiError response = Allure.step("Пробуем зарегистрировать аккаунт с паролем null", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
                     .filter(filter)
@@ -358,7 +358,7 @@ public class SecurityApiTest extends TestBaseAPI {
         body.put("name", name);
         body.put("password", password);
 
-        RegisterAccountResponse response = Allure.step("Пробуем создать аккаунт с валидной границей паролей", () -> {
+        RegisterAccountResponse response = Allure.step("Регистрируем аккаунт с паролем допустимой длины", () -> {
             SessionFilter filter = new SessionFilter();
             CsrfResponse csrf = given()
                     .filter(filter)
@@ -456,7 +456,7 @@ public class SecurityApiTest extends TestBaseAPI {
     public void loginWithValidNickname() {
         String name =  ApiUtility.genNick();
         String password =  ApiUtility.genPass();
-        Allure.step("Авторизуемся в созданный аккаунт под несуществующим ником", () -> {
+        Allure.step("Пытаемся войти с несуществующим именем пользователя", () -> {
             given()
                     .auth().preemptive().basic(name, password)
                     .when()

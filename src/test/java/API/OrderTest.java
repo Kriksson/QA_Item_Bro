@@ -322,7 +322,7 @@ public class OrderTest extends TestBaseAPI {
             Assert.assertEquals(createdOrder.id(), order.id());
         });
 
-        Allure.step("Гость запрашивает информацию о заказе и получает 403 с ошибкой \"У вас нет прав\"", () -> {
+        Allure.step("Посторонний пользователь запрашивает информацию о заказе и получает 403 с ошибкой \"У вас нет прав\"", () -> {
             given()
                     .filter(guestUtil.sessionFilter())
                     .auth().preemptive().basic(guestName, guestPassword)
@@ -403,7 +403,7 @@ public class OrderTest extends TestBaseAPI {
                     .statusCode(201)
                     .extract().body().as(OrderDTO.class);
         });
-        OrderDTO secondOrder = Allure.step("Покупатель покупает первый товар", () -> {
+        OrderDTO secondOrder = Allure.step("Покупатель покупает второй товар", () -> {
             Map<String, Long> body =  new HashMap<>();
             body.put("id", secondCreatedAdvice.id());
 
@@ -445,8 +445,8 @@ public class OrderTest extends TestBaseAPI {
                     .statusCode(200)
                     .extract().jsonPath().getList(".",  OrderDTO.class);
 
-            Assert.assertTrue(orders.stream().anyMatch(x -> x.adviceDTO().id().equals(firstOrder.id())));
-            Assert.assertTrue(orders.stream().anyMatch(x -> x.adviceDTO().id().equals(secondOrder.id())));
+            Assert.assertTrue(orders.stream().anyMatch(x -> x.id().equals(firstOrder.id())));
+            Assert.assertTrue(orders.stream().anyMatch(x -> x.id().equals(secondOrder.id())));
         });
     }
 

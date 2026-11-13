@@ -68,7 +68,7 @@ public class AuthTest extends TestBaseUI{
     public void unsuccessfulLoginWithInvalidPassword() {
         MainPage mainPage = new MainPage(URL);
         mainPage.authUser("ADMIN", "admin");
-        Allure.step("Ожидаем ошибку \"Имя занято!\"", () -> Assert.assertEquals("Неверное имя или пароль. Войди заново.", mainPage.getFormError()));
+        Allure.step("Ожидаем ошибку \"Неверное имя или пароль\"", () -> Assert.assertEquals("Неверное имя или пароль. Войди заново.", mainPage.getFormError()));
     }
 
     @Test

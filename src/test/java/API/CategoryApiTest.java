@@ -92,7 +92,7 @@ public class CategoryApiTest extends TestBaseAPI{
                 .extract().body().as(ApiError.class)
         );
 
-        Allure.step("Проверяем что ошибка с связана с отсутствием прав", () -> Assert.assertEquals("no have permissions to create game", api.message()));
+        Allure.step("Проверяем что ошибка связана с отсутствием прав", () -> Assert.assertEquals("no have permissions to create game", api.message()));
     }
 
     @Test
@@ -128,7 +128,7 @@ public class CategoryApiTest extends TestBaseAPI{
         HashMap<String, Object> body = new HashMap<>();
         body.put("name", name);
 
-        Allure.step("Администратор не может создать категорию с пустым названием", () -> given()
+        Allure.step("Администратор не может создать категорию с невалидным названием", () -> given()
                 .filter(filter)
                 .header(csrf.headerName(), csrf.token())
                 .contentType(ContentType.JSON)
@@ -295,7 +295,7 @@ public class CategoryApiTest extends TestBaseAPI{
 
         CategoryDTO createdCategory = ApiUtility.createTestCategory(URL, "Minecraft");
 
-        Allure.step("Архивация созданного объявления", () -> {
+        Allure.step("Архивируем созданную категорию", () -> {
             given()
                     .filter(filter)
                     .header(csrf.headerName(), csrf.token())
@@ -306,7 +306,7 @@ public class CategoryApiTest extends TestBaseAPI{
                     .statusCode(204);
         });
 
-        Allure.step("Архивация уже архивированного объявления", () -> {
+        Allure.step("Пытаемся повторно архивировать категорию", () -> {
             given()
                     .filter(filter)
                     .header(csrf.headerName(), csrf.token())
